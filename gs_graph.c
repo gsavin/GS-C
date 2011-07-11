@@ -40,7 +40,7 @@ gs_graph_create(const element_id_t id)
   
   GS_OBJECT(graph)->type = GRAPH_TYPE;
   gs_element_init(GS_ELEMENT(graph),id);
-  gs_stream_source_init(GS_SOURCE(graph));
+  gs_stream_source_init(GS_SOURCE(graph), id);
   gs_stream_sink_init(GS_SINK(graph), GS_SINK_CALLBACK(_gs_graph_sink_callback));
 
   graph->nodes = GRAPH_ELEMENT_HASH_FUNCTION(_gs_graph_node_destroy);

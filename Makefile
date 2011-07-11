@@ -1,6 +1,6 @@
 #DEFS=-DDEBUG
 DEFS=
-OBJS=main.o gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o
+OBJS=main.o gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o
 CFLAGS=-I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
 CLIBS=-L/usr/local/lib -leina
 

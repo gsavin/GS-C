@@ -5,6 +5,7 @@
 #include "gs_common.h"
 
 struct _source {
+  element_id_t id;
   unsigned int sink_count;
   Eina_List *sinks;
 };
@@ -40,7 +41,8 @@ struct _sink {
 #define GS_SINK_FIELD sink_t __sink
 #define GS_SINK(e) ((sink_t*) &(e->__sink))
 
-GSAPI void gs_stream_source_init(source_t *source);
+GSAPI void gs_stream_source_init(source_t *source,
+				 element_id_t id);
 
 GSAPI void gs_stream_source_finalize(source_t *source);
 

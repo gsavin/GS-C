@@ -26,8 +26,11 @@ _gs_stream_source_trigger(const source_t *source,
  */
 
 GSAPI void
-gs_stream_source_init(source_t *source)
+gs_stream_source_init(source_t *source,
+		      element_id_t id)
 {
+  source->id = id;
+  source->sink_count = 0;
   source->sinks = NULL;
 }
 
