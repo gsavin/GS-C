@@ -1,14 +1,19 @@
 #DEFS=-DDEBUG
 DEFS=
-OBJS=main.o gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o
-CFLAGS=-I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
-CLIBS=-L/usr/local/lib -leina
+OBJS=main.o
+CFLAGS=-Isrc/ -I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
+CLIBS=-L/usr/local/lib -leina -L. -lgs
+GS_LIB=libgs.so.1.0.0
 
-test: $(OBJS)
+test: libgs $(OBJS)
 	gcc -o test -g $(OBJS) $(CLIBS) 
 
+libgs:
+	make -C src libgs
+
 .c.o :
-	gcc -g -c $(DEFS) $(CFLAGS) $<
+	gcc -fpic -g -c $(DEFS) $(CFLAGS) $<
 
 clean:
+	make -C src clean
 	rm -f *.o *.d *~ test
