@@ -139,6 +139,8 @@ test_bfs()
     n = gs_iterator_next_node(it);
   }
 
+  printf("Max depth : %d\n", gs_graph_iterator_bfs_max_depth(it));
+
   gs_iterator_free(it);
   gs_graph_destroy(g);
 }

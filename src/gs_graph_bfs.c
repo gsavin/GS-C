@@ -7,8 +7,8 @@ static const char GRAPH_BFS_ITERATOR_MAGIC_STR[] = "Graph BFS Iterator";
 
 #define CHECK_GRAPH_BFS_ITERATOR_MAGIC(d, ...)			\
   do {								\
-    if (!EINA_MAGIC_CHECK(d, EINA_MAGIC_GRAPH_BFS_ITERATOR)) {	\
-      EINA_MAGIC_FAIL(d, EINA_MAGIC_GRAPH_BFS_ITERATOR);	\
+    if (!EINA_MAGIC_CHECK(d, GRAPH_BFS_ITERATOR_MAGIC)) {	\
+      EINA_MAGIC_FAIL(d, GRAPH_BFS_ITERATOR_MAGIC);		\
       return __VA_ARGS__;					\
     }								\
   } while(0)
@@ -20,6 +20,10 @@ struct _graph_iterator_bfs {
   iterator_t *nodes;
   Eina_List *candidats;
   Eina_List *closed;
+  unsigned int depth;
+  unsigned int max_depth;
+  unsigned int circle_remaining;
+  unsigned int next_circle_size;
 
   EINA_MAGIC
 };
@@ -48,6 +52,8 @@ _bfs_next(graph_iterator_bfs *iterator,
     }
     else {
       next = gs_iterator_next_node(iterator->nodes);
+      iterator->circle_remaining = 1;
+      iterator->depth = 0;
 
       if(next == NULL) {
 	gs_iterator_free(iterator->nodes);
@@ -76,13 +82,28 @@ _bfs_next(graph_iterator_bfs *iterator,
       op = gs_edge_oposite_get(edge, next);
 
       if(eina_list_data_find(iterator->closed, op) == NULL &&
-	 eina_list_data_find(iterator->candidats, op) == NULL)
+	 eina_list_data_find(iterator->candidats, op) == NULL) {
 	iterator->candidats = eina_list_append(iterator->candidats, op);
+	iterator->next_circle_size++;
+      }
 
       edge  = gs_iterator_next_edge(edges);
     }
 
+    iterator->circle_remaining--;
     gs_iterator_free(edges);
+
+    if (iterator->circle_remaining == 0) {
+      iterator->circle_remaining = iterator->next_circle_size;
+      iterator->next_circle_size = 0;
+
+      iterator->depth++;
+      if (iterator->depth > iterator->max_depth)
+	iterator->max_depth = iterator->depth;
+      
+      EINA_LOG_DBG("current depth : %d, %d remaining", iterator->depth,
+		   iterator->circle_remaining);
+    }
     
     return EINA_TRUE;
   } else {
@@ -145,6 +166,10 @@ _gs_graph_iterator_bfs_create(const graph_t *graph)
   iterator->graph = graph;
   iterator->candidats = NULL;
   iterator->closed = NULL;
+  iterator->depth = 0;
+  iterator->max_depth = 0;
+  iterator->circle_remaining = 0;
+  iterator->next_circle_size = 0;
 
   return iterator;
 }
@@ -177,9 +202,29 @@ gs_graph_iterator_bfs_new_from_root(const graph_t *graph,
     
     iterator = _gs_graph_iterator_bfs_create(graph);
     iterator->candidats = eina_list_append(iterator->candidats, r);
+    iterator->circle_remaining = 1;
 
     return (iterator_t*) iterator;
   }
 
   return NULL;
 }
+
+GSAPI unsigned int
+gs_graph_iterator_bfs_depth(const iterator_t *iterator)
+{
+  if(iterator)
+    CHECK_GRAPH_BFS_ITERATOR_MAGIC((graph_iterator_bfs*) iterator, NULL);
+
+  return ((graph_iterator_bfs*) iterator)->depth - 1;
+}
+
+GSAPI unsigned int
+gs_graph_iterator_bfs_max_depth(const iterator_t *iterator)
+{
+  if(iterator)
+    CHECK_GRAPH_BFS_ITERATOR_MAGIC((graph_iterator_bfs*) iterator, NULL);
+
+  return ((graph_iterator_bfs*) iterator)->max_depth - 1;
+}
+

@@ -14,4 +14,10 @@ GSAPI iterator_t*
 gs_graph_iterator_bfs_new_from_root(const graph_t *graph,
 				    element_id_t root);
 
+GSAPI unsigned int
+gs_graph_iterator_bfs_depth(const iterator_t *iterator);
+
+GSAPI unsigned int
+gs_graph_iterator_bfs_max_depth(const iterator_t *iterator);
+
 #endif /* _GS_GRAPH_BFS_H_ */
