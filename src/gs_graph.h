@@ -46,15 +46,11 @@ GSAPI void gs_graph_edge_delete(const graph_t*,
 
 GSAPI iterator_t *gs_graph_node_iterator_new(const graph_t*);
 
-GSAPI node_t *gs_graph_node_iterator_next(iterator_t*);
-
 GSAPI void gs_graph_node_foreach(const graph_t *graph,
 				 const node_cb_t callback,
 				 void **data);
 
 GSAPI iterator_t *gs_graph_edge_iterator_new(const graph_t*);
-
-GSAPI edge_t *gs_graph_edge_iterator_next(iterator_t*);
 
 GSAPI void gs_graph_edge_foreach(const graph_t *graph,
 				 const edge_cb_t callback,

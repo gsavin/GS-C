@@ -8,7 +8,7 @@
 typedef enum {
   DGS_AN, DGS_CN, DGS_DN,
   DGS_AE, DGS_CE, DGS_DE,
-  DGS_CG, DGS_ST
+  DGS_CG, DGS_ST, DGS_EOF
 } dgs_event_t;
 
 GSAPI static inline void
@@ -40,21 +40,19 @@ _eat_spaces(FILE *in)
 GSAPI static void
 _gs_stream_source_dgs_read_header(const source_dgs_t *source)
 {
-  char *magic;
+  char magic[7];
   size_t r;
 
-  magic = (char*) malloc(6*sizeof(char));
-  r = fread(magic, 6, sizeof(char), source->in);
+  r = fread(magic, sizeof(char), 6, source->in);
+  magic[6] = '\0';
 
   if(r<6)
     ERROR(GS_ERROR_IO);
 
-  if(strcmp(magic,"DGS004")) {
+  if(strcmp(magic,"DGS004") != 0) {
     EINA_LOG_WARN("Invalid DGS magic header");
     ERROR(GS_ERROR_IO);
   }
-
-  free(magic);
 
   _eat_end_of_line(source->in, GS_FALSE, GS_FALSE);
   
@@ -68,7 +66,10 @@ _gs_stream_source_dgs_read_event_type(const source_dgs_t *source)
 {
   char c1, c2;
 
-  c1 = fgetc(source->in);
+  // Skip empty line
+  while((c1 = fgetc(source->in)) == '\n')
+    ;
+
   c2 = fgetc(source->in);
 
   if(c1 >= 'A' && c1 <= 'Z')
@@ -76,6 +77,8 @@ _gs_stream_source_dgs_read_event_type(const source_dgs_t *source)
 
   if(c2 >= 'A' && c2 <= 'Z')
     c2 = c2 - ('A' - 'a');
+
+  EINA_LOG_DBG("%c%c", c1, c2);
 
   switch(c2) {
   case 'n':
@@ -110,6 +113,8 @@ _gs_stream_source_dgs_read_event_type(const source_dgs_t *source)
       ERROR(GS_ERROR_IO);
     
     return DGS_ST;
+  case EOF:
+    return DGS_EOF;
   default:
     ERROR(GS_ERROR_IO);
   }
@@ -125,6 +130,7 @@ _dgs_read_id(FILE *in)
 
   buffer = eina_strbuf_new();
 
+  _eat_spaces(in);
   c = fgetc(in);
 
   if(c == '"') {
@@ -161,6 +167,8 @@ _dgs_read_id(FILE *in)
   id = eina_strbuf_string_steal(buffer);
   eina_strbuf_free(buffer);
 
+  EINA_LOG_DBG("\"%s\"", id);
+
   return id;
 }
 
@@ -177,7 +185,9 @@ _dgs_read_event_an(const source_dgs_t *source)
 				      GS_SOURCE(source)->id,
 				      id);
 
-  free(id);
+  EINA_LOG_DBG("!");
+
+  gs_id_release(id);
 }
 
 GSAPI static inline void
@@ -198,7 +208,7 @@ _dgs_read_event_dn(const source_dgs_t *source)
 					GS_SOURCE(source)->id,
 					id);
 
-  free(id);
+  gs_id_release(id);
 }
 
 GSAPI static inline void
@@ -246,9 +256,9 @@ _dgs_read_event_ae(const source_dgs_t *source)
   // TODO : Handle attributes
   _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 
-  free(id);
-  free(node_source);
-  free(node_target);
+  gs_id_release(id);
+  gs_id_release(node_source);
+  gs_id_release(node_target);
 }
 
 GSAPI static inline void
@@ -268,7 +278,7 @@ _dgs_read_event_de(const source_dgs_t *source)
 					GS_SOURCE(source)->id,
 					id);
 
-  free(id);
+  gs_id_release(id);
 }
 
 GSAPI static inline void
@@ -283,6 +293,51 @@ _dgs_read_event_st(const source_dgs_t *source)
 {
   // TODO
   _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
+}
+
+GSAPI static void
+_dgs_sink_callback(const sink_t *sink,
+		   const event_t e,
+		   size_t size,
+		   const void **data)
+{
+  sink_dgs_t *dgs;
+  int err;
+  dgs = DGS_SINK(sink);
+
+  switch(e) {
+  case NODE_ADDED:
+    assert(size > 1 );
+    err = fprintf(dgs->out, "an \"%s\"\n", data[1]);
+    break;
+  case NODE_DELETED:
+    assert(size > 1 );
+    err = fprintf(dgs->out, "dn \"%s\"\n", data[1]);
+    break;
+  case EDGE_ADDED:
+    assert(size > 4 );
+
+    if((bool_t) data[4])
+       err = fprintf(dgs->out, "ae \"%s\" \"%s\" > \"%s\"\n",
+		     data[1],
+		     data[2],
+		     data[3]);
+    else
+       err = fprintf(dgs->out, "ae \"%s\" \"%s\" \"%s\"\n",
+		     data[1],
+		     data[2],
+		     data[3]);
+    break;
+  case EDGE_DELETED:
+    assert(size > 1 );
+    err = fprintf(dgs->out, "de \"%s\"\n", data[1]);
+    break;
+  }
+
+  if(err < 0)
+    ERROR(GS_ERROR_IO);
+
+  fflush(dgs->out);
 }
 
 /**********************************************************************
@@ -301,6 +356,8 @@ gs_stream_source_file_dgs_open(const char *filename)
     source = (source_dgs_t*) malloc(sizeof(source_dgs_t));
     gs_stream_source_init(GS_SOURCE(source), filename);
     source->in = in;
+    
+    _gs_stream_source_dgs_read_header(source);
 
     return source;
   }
@@ -351,5 +408,54 @@ gs_stream_source_file_dgs_next(const source_dgs_t *source)
   case DGS_ST:
     _dgs_read_event_st(source);
     break;
+  case DGS_EOF:
+    return GS_FALSE;
   }
+
+  return GS_TRUE;
+}
+
+
+
+GSAPI sink_dgs_t*
+gs_stream_sink_file_dgs_open(const char *filename)
+{
+  sink_dgs_t *dgs;
+  int err;
+  FILE *out;
+
+  out = fopen(filename, "w");
+
+  if(out == NULL)
+    ERROR_ERRNO(GS_ERROR_IO);
+
+  dgs = (sink_dgs_t*) malloc(sizeof(sink_dgs_t));
+  dgs->out = out;
+  
+  gs_stream_sink_init(GS_SINK(dgs),
+		      dgs,
+		      GS_SINK_CALLBACK(_dgs_sink_callback));
+
+  err = fprintf(out, "DGS004\nnull 0 0\n");
+  fflush(out);
+
+  if(err < 0)
+    ERROR(GS_ERROR_IO);
+
+  return dgs;
+}
+
+GSAPI void
+gs_stream_sink_file_dgs_close(sink_dgs_t *sink)
+{
+  int err;
+
+  err = fclose(sink->out);
+  if(err < 0)
+    ERROR(GS_ERROR_IO);
+
+  sink->out = NULL;
+  gs_stream_sink_finalize(GS_SINK(sink));
+
+  free(sink);
 }

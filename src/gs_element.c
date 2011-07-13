@@ -1,7 +1,7 @@
 #include "gs_element.h"
 
 #ifndef ELEMENT_HASH_FUNCTION
-#define ELEMENT_HASH_FUNCTION eina_hash_string_djb2_new
+#define ELEMENT_HASH_FUNCTION eina_hash_string_small_new
 #endif
 
 /**********************************************************************

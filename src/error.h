@@ -16,6 +16,19 @@
 #define ERROR(e)					\
   do {							\
     EINA_LOG_ERR("#%d", e);				\
+    exit(e);						\
   } while(0)
+
+#define ERROR_ERRNO(e)				\
+  do {						\
+    EINA_LOG_ERR("%s", strerror(errno));	\
+    exit(e);					\
+  } while(0)
+
+#ifndef DEBUG
+#define NDEBUG
+#endif
+
+#include <assert.h>
 
 #endif /* _ERROR_H_ */

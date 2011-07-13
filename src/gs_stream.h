@@ -32,6 +32,7 @@ typedef void (*sink_cb_t)(const sink_t *sink, const event_t e, size_t size, cons
 #define GS_SINK_CALLBACK(function) ((sink_cb_t)function)
 
 struct _sink {
+  void *container;
   sink_cb_t callback;
 };
 
@@ -72,6 +73,7 @@ GSAPI void gs_stream_source_trigger_edge_deleted(source_t *source,
 						 element_id_t edge_id);
 
 GSAPI void gs_stream_sink_init(sink_t *sink,
+			       void *container,
 			       sink_cb_t callback);
 
 GSAPI void gs_stream_sink_finalize(sink_t *sink);

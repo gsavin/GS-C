@@ -16,9 +16,10 @@ _gs_stream_source_trigger(const source_t *source,
   sink_t      *sink;
 
   list = source->sinks;
-
-  EINA_LIST_FOREACH_SAFE(list, l, l_next, data)
+  
+  EINA_LIST_FOREACH_SAFE(list, l, l_next, sink) {
     sink->callback(sink, event, size, data);
+  }
 }
 
 /**********************************************************************
@@ -29,6 +30,7 @@ GSAPI void
 gs_stream_source_init(source_t *source,
 		      element_id_t id)
 {
+  EINA_LOG_DBG("%d", source);
   source->id = id;
   source->sink_count = 0;
   source->sinks = NULL;
@@ -50,6 +52,9 @@ gs_stream_source_sink_add(source_t *source,
     ERROR(GS_ERROR_CAN_NOT_ADD_SINK);
 
   source->sink_count = eina_list_count(source->sinks);
+
+  EINA_LOG_DBG("%d | %d", source, sink);
+  EINA_LOG_DBG("sink count = %d", source->sink_count);
 }
 
 GSAPI void
@@ -143,9 +148,13 @@ gs_stream_source_trigger_edge_deleted(source_t *source,
 }
 
 GSAPI void
-gs_stream_sink_init(sink_t *sink, sink_cb_t callback)
+gs_stream_sink_init(sink_t *sink,
+		    void *container,
+		    sink_cb_t callback)
 {
-  sink->callback = callback;
+  EINA_LOG_DBG("%d", sink);
+  sink->container = container;
+  sink->callback  = callback;
 }
 
 GSAPI void

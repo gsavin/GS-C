@@ -1,15 +1,15 @@
-#DEFS=-DDEBUG
-CC=gcc
+CC=gcc -fpic -g
 DEFS=
-OBJS=gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o
+DEFS+=-DDEBUG
+OBJS=gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o gs_id.o gs_graph_bfs.o
 CFLAGS=-I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
 CLIBS=-L/usr/local/lib -leina
 
 libgs: $(OBJS)
-	$(CC) -shared -Wl,-soname,libgs.so.1 -o ../libgs.so -g $(OBJS) $(CLIBS)
+	$(CC) -shared -Wl,-soname,libgs.so.1.0 -o ../libgs.so.1.0 $(OBJS) $(CLIBS)
 
 .c.o :
-	$(CC) -fpic -O2 -g -c $(DEFS) $(CFLAGS) $<
+	$(CC) -fpic -c $(DEFS) $(CFLAGS) $<
 
 clean:
 	rm -f *.o *.d *~ ../libgs.so*

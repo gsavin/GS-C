@@ -28,3 +28,25 @@ gs_iterator_free(iterator_t *it)
 {
   eina_iterator_free(it);
 }
+
+GSAPI node_t*
+gs_iterator_next_node(const iterator_t *it)
+{
+  node_t *next;
+
+  if(eina_iterator_next(it, (void**) &next) != EINA_TRUE)
+    return NULL;
+
+  return next;
+}
+
+GSAPI edge_t*
+gs_iterator_next_edge(const iterator_t *it)
+{
+  edge_t *next;
+
+  if(eina_iterator_next(it, (void**) &next) != EINA_TRUE)
+    return NULL;
+
+  return next;
+}

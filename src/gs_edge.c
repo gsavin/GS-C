@@ -19,7 +19,7 @@ gs_edge_create(const graph_t *g,
   edge->directed = directed;
 
 #ifdef DEBUG
-  EINA_LOG_DBG("edge \"%s\" created", id);
+  EINA_LOG_DBG("\"%s\"", id);
 #endif
 
   return edge;
@@ -29,9 +29,21 @@ GSAPI void
 gs_edge_destroy(edge_t *edge)
 {
 #ifdef DEBUG
-  EINA_LOG_DBG("edge \"%s\" destroyed", gs_element_id_get(GS_ELEMENT(edge)));
+  EINA_LOG_DBG("\"%s\"", gs_element_id_get(GS_ELEMENT(edge)));
 #endif
 
   gs_element_finalize(GS_ELEMENT(edge));
   free(edge);
+}
+
+GSAPI node_t*
+gs_edge_oposite_get(const edge_t *edge,
+		    const node_t *node)
+{
+  if(node == edge->source)
+    return edge->target;
+  else if(node == edge->target)
+    return edge->source;
+  else
+    ERROR(GS_ERROR_NODE_NOT_FOUND);
 }

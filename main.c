@@ -1,4 +1,6 @@
 #include "graphstream.h"
+#include "gs_stream_dgs.h"
+#include "gs_graph_bfs.h"
 
 static void print_id_cb(void *n, void **data)
 {
@@ -58,27 +60,100 @@ create_graph(int r)
   free(edge_ids);
 }
 
-int
-main(int argc, char **argv)
+void
+benchmark()
 {
   Eina_Benchmark *test;
   Eina_Array     *ea;
 
-  if (!gs_init())
-    return EXIT_FAILURE;
-
    test = eina_benchmark_new("test", "creation");
+
    if (!test)
-     goto shutdown_gs;
+     return;
 
    eina_benchmark_register(test, "work-1", EINA_BENCHMARK(create_graph), 1, 100, 1);
 
    ea = eina_benchmark_run(test);
 
    eina_benchmark_free(test);
-   gs_shutdown();
+}
 
-   return EXIT_SUCCESS;
+void
+test_dgs()
+{
+  graph_t *g;
+  source_dgs_t *in;
+  sink_dgs_t *out;
+  
+  g = gs_graph_create("g");
+  in = gs_stream_source_file_dgs_open("sample.dgs");
+  out = gs_stream_sink_file_dgs_open("sample.out.dgs");
+
+  EINA_LOG_DBG("opened");
+
+  gs_stream_source_sink_add(GS_SOURCE(in),
+			    GS_SINK(g));
+
+  gs_stream_source_sink_add(GS_SOURCE(g),
+			    GS_SINK(out));
+
+  while(gs_stream_source_file_dgs_next(in))
+    ;
+
+  gs_stream_source_file_dgs_close(in);
+  gs_stream_sink_file_dgs_close(out);
+  gs_graph_destroy(g);
+}
+
+void
+test_bfs()
+{
+  graph_t *g;
+  iterator_t *it;
+  node_t *n;
+
+  g = gs_graph_create("g");
+  gs_graph_node_add(g, "A");
+  gs_graph_node_add(g, "A1");
+  gs_graph_node_add(g, "A2");
+  gs_graph_node_add(g, "A3");
+  gs_graph_node_add(g, "A21");
+  gs_graph_node_add(g, "A22");
+  gs_graph_node_add(g, "A221");
+  gs_graph_node_add(g, "A222");
+
+  gs_graph_edge_add(g, "01", "A", "A1", GS_FALSE);
+  gs_graph_edge_add(g, "02", "A", "A2", GS_FALSE);
+  gs_graph_edge_add(g, "03", "A", "A3", GS_FALSE);
+
+  gs_graph_edge_add(g, "04", "A2", "A21", GS_FALSE);
+  gs_graph_edge_add(g, "05", "A2", "A22", GS_FALSE);
+  gs_graph_edge_add(g, "06", "A22", "A221", GS_FALSE);
+  gs_graph_edge_add(g, "07", "A22", "A222", GS_FALSE);
+
+  it = gs_graph_iterator_bfs_new_from_root(g, "A");
+  n = gs_iterator_next_node(it);
+
+  while(n != NULL) {
+    printf("- \"%s\"\n", gs_element_id_get(GS_ELEMENT(n)));
+    n = gs_iterator_next_node(it);
+  }
+
+  gs_iterator_free(it);
+  gs_graph_destroy(g);
+}
+
+int
+main(int argc, char **argv)
+{
+  if (!gs_init())
+    return EXIT_FAILURE;
+  
+  test_bfs();
+
+  gs_shutdown();
+
+  return EXIT_SUCCESS;
 
   shutdown_gs:
    gs_shutdown();
