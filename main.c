@@ -131,7 +131,7 @@ test_bfs()
   gs_graph_edge_add(g, "06", "A22", "A221", GS_FALSE);
   gs_graph_edge_add(g, "07", "A22", "A222", GS_FALSE);
 
-  it = gs_graph_iterator_bfs_new_from_root(g, "A");
+  it = gs_graph_iterator_bfs_new_from_root_id(g, "A", GS_FALSE);
   n = gs_iterator_next_node(it);
 
   while(n != NULL) {
@@ -139,7 +139,7 @@ test_bfs()
     n = gs_iterator_next_node(it);
   }
 
-  printf("Max depth : %d\n", gs_graph_iterator_bfs_max_depth(it));
+  printf("Max depth : %d\n", gs_graph_iterator_bfs_depth_max(it));
 
   gs_iterator_free(it);
   gs_graph_destroy(g);

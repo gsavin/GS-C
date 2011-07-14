@@ -1,7 +1,7 @@
 CC=gcc -fpic -g
 DEFS=
 DEFS+=-DDEBUG
-OBJS=gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o gs_id.o gs_graph_bfs.o
+OBJS=gs_element.o gs_node.o gs_edge.o gs_graph.o gs_common.o gs_stream.o gs_stream_dgs.o gs_id.o gs_graph_bfs.o gs_algorithm_unweighted_eccentricity.o
 CFLAGS=-I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
 CLIBS=-L/usr/local/lib -leina
 

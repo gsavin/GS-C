@@ -12,7 +12,13 @@ gs_graph_iterator_bfs_new(const graph_t *graph);
 
 GSAPI iterator_t*
 gs_graph_iterator_bfs_new_from_root(const graph_t *graph,
-				    element_id_t root);
+				    const node_t *root,
+				    bool_t make_hop);
+
+GSAPI iterator_t*
+gs_graph_iterator_bfs_new_from_root_id(const graph_t *graph,
+				       element_id_t root,
+				       bool_t make_hop);
 
 GSAPI unsigned int
 gs_graph_iterator_bfs_depth(const iterator_t *iterator);
