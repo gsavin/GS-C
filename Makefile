@@ -1,6 +1,6 @@
-CC=gcc -fpic -g
+CC=gcc -fpic -O2
 DEFS=
-DEFS+=-DDEBUG
+#DEFS+=-DDEBUG
 OBJS=main.o
 CFLAGS=-Isrc/ -I/usr/local/include/eina-1 -I/usr/local/include/eina-1/eina
 CLIBS=-L/usr/local/lib -leina -L. -l:libgs.so.1.0

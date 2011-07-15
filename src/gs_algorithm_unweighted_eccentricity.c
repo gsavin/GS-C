@@ -18,6 +18,7 @@ _unweighted_eccentricity(iterator_t *it)
     gs_iterator_free(it);
   }
   else {
+    EINA_LOG_DBG("iterator is NULL");
     r = -1;
   }
 

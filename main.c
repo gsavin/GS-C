@@ -1,6 +1,7 @@
 #include "graphstream.h"
 #include "gs_stream_dgs.h"
 #include "gs_graph_bfs.h"
+#include "gs_algorithm_diameter.h"
 
 static void print_id_cb(void *n, void **data)
 {
@@ -145,13 +146,37 @@ test_bfs()
   gs_graph_destroy(g);
 }
 
+void 
+test_diameter()
+{
+  graph_t *g;
+  int d;
+  source_dgs_t *in;
+  
+  g = gs_graph_create("g");
+  in = gs_stream_source_file_dgs_open("test.dgs");
+
+  gs_stream_source_sink_add(GS_SOURCE(in),
+			    GS_SINK(g));
+
+  while(gs_stream_source_file_dgs_next(in))
+    ;
+
+  gs_stream_source_file_dgs_close(in);
+
+  d = gs_algorithm_diameter(g);
+  gs_graph_destroy(g);
+  
+  printf("Diameter : %d\n", d);
+}
+
 int
 main(int argc, char **argv)
 {
   if (!gs_init())
     return EXIT_FAILURE;
   
-  test_bfs();
+  test_diameter();
 
   gs_shutdown();
 

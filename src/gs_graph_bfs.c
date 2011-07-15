@@ -18,7 +18,8 @@ struct _graph_iterator_bfs {
   graph_t     *graph;
   iterator_t  *nodes;
   Eina_List   *candidats;
-  Eina_List   *closed;
+  Eina_Hash   *candidats_hash;
+  Eina_Hash   *closed;
   unsigned int depth;
   unsigned int max_depth;
   unsigned int circle_remaining;
@@ -31,6 +32,14 @@ struct _graph_iterator_bfs {
 /**********************************************************************
  * PRIVATE
  */
+
+static const bool_t not_null = GS_TRUE;
+
+GSAPI static void
+_bfs_hash_free(void *data)
+{
+  // Nothing to do
+}
 
 GSAPI static Eina_Bool
 _bfs_next(graph_iterator_bfs *iterator,
@@ -45,10 +54,12 @@ _bfs_next(graph_iterator_bfs *iterator,
   do {
     if (eina_list_count(iterator->candidats) > 0) {
       next = (node_t*) eina_list_data_get(iterator->candidats);
-      EINA_LOG_DBG("candidats : %s", gs_element_id_get(GS_ELEMENT(next)));
 
       iterator->candidats = eina_list_remove_list(iterator->candidats,
 						  iterator->candidats);
+      eina_hash_del_by_key(iterator->candidats_hash, &next);
+
+      //EINA_LOG_DBG("next from candidats: \"%s\"", gs_element_id_get(GS_ELEMENT(next)));
     }
     else if (iterator->make_hop) {
       next = gs_iterator_next_node(iterator->nodes);
@@ -58,21 +69,24 @@ _bfs_next(graph_iterator_bfs *iterator,
       if(next == NULL) {
 	gs_iterator_free(iterator->nodes);
 	iterator->nodes = NULL;
+
+	//EINA_LOG_DBG("next from hop: \"%s\"", gs_element_id_get(GS_ELEMENT(next)));
       }
-      else
-	EINA_LOG_DBG("next  node : %s", gs_element_id_get(GS_ELEMENT(next)));
+    }
+    else {
+      next = NULL;
     }
   } while (next != NULL && 
-	   eina_list_data_find(iterator->closed, next) != NULL);
+	   eina_hash_find(iterator->closed, &next) != NULL);
 
   if(next != NULL) {
     iterator_t *edges;
     edge_t *edge;
     node_t *op;
 
-    EINA_LOG_DBG("next found : %s", gs_element_id_get(GS_ELEMENT(next)));
+    //EINA_LOG_DBG("next found : %s", gs_element_id_get(GS_ELEMENT(next)));
 
-    iterator->closed = eina_list_append(iterator->closed, next);
+    eina_hash_add(iterator->closed, &next, &not_null);
     *data = next;
 
     edges = gs_node_edge_iterator_new(next);
@@ -80,11 +94,12 @@ _bfs_next(graph_iterator_bfs *iterator,
 
     while(edge != NULL) {
       op = gs_edge_oposite_get(edge, next);
-
-      if(eina_list_data_find(iterator->closed, op) == NULL &&
-	 eina_list_data_find(iterator->candidats, op) == NULL) {
+      
+      if(eina_hash_find(iterator->closed, &op) == NULL &&
+	 eina_hash_find(iterator->candidats_hash, &op) == NULL) {
 	iterator->candidats = eina_list_append(iterator->candidats, op);
 	iterator->next_circle_size++;
+	eina_hash_add(iterator->candidats_hash, &op, &not_null);
       }
 
       edge  = gs_iterator_next_edge(edges);
@@ -101,14 +116,14 @@ _bfs_next(graph_iterator_bfs *iterator,
       if (iterator->depth > iterator->max_depth)
 	iterator->max_depth = iterator->depth;
       
-      EINA_LOG_DBG("current depth : %d, %d remaining", iterator->depth,
-		   iterator->circle_remaining);
+      //EINA_LOG_DBG("current depth : %d, %d remaining", iterator->depth,
+      //		   iterator->circle_remaining);
     }
     
     return EINA_TRUE;
-  } else {
-    return EINA_FALSE;
   }
+  else
+    return EINA_FALSE;
 }
 
 GSAPI static void*
@@ -123,14 +138,15 @@ _bfs_free(graph_iterator_bfs *iterator)
   if(iterator->nodes != NULL)
     gs_iterator_free(iterator->nodes);
 
-  EINA_MAGIC_SET(iterator, EINA_MAGIC_NONE);
+  EINA_MAGIC_SET(iterator,          EINA_MAGIC_NONE);
   EINA_MAGIC_SET(&iterator->parent, EINA_MAGIC_NONE);
 
   iterator->nodes = NULL;
   iterator->graph = NULL;
   
   eina_list_free(iterator->candidats);
-  eina_list_free(iterator->closed);
+  eina_hash_free(iterator->candidats_hash);
+  eina_hash_free(iterator->closed);
 
   free(iterator);
 }
@@ -165,7 +181,8 @@ _gs_graph_iterator_bfs_create(const graph_t *graph)
   iterator->nodes            = gs_graph_node_iterator_new(graph);
   iterator->graph            = graph;
   iterator->candidats        = NULL;
-  iterator->closed           = NULL;
+  iterator->candidats_hash   = eina_hash_pointer_new(EINA_FREE_CB(_bfs_hash_free));
+  iterator->closed           = eina_hash_pointer_new(EINA_FREE_CB(_bfs_hash_free));
   iterator->depth            = 0;
   iterator->max_depth        = 0;
   iterator->circle_remaining = 0;
@@ -196,7 +213,7 @@ gs_graph_iterator_bfs_new_from_root(const graph_t *graph,
   graph_iterator_bfs *iterator;
 
   if(root == NULL)
-    ERROR(GS_ERROR_NODE_NOT_FOUND);
+    ERROR(GS_ERROR_NULL_POINTER);
     
   iterator = _gs_graph_iterator_bfs_create(graph);
   iterator->candidats        = eina_list_append(iterator->candidats, root);
@@ -212,23 +229,22 @@ gs_graph_iterator_bfs_new_from_root_id(const graph_t *graph,
 				       bool_t make_hop)
 {
   graph_iterator_bfs *iterator;
+  node_t *r;
 
-  if(root != NULL) {
-    node_t *r;
-    r = gs_graph_node_get(graph, root);
+  if (root == NULL)
+    ERROR(GS_ERROR_NULL_POINTER);
+
+  r = gs_graph_node_get(graph, root);
     
-    if(r == NULL)
-      ERROR(GS_ERROR_NODE_NOT_FOUND);
+  if(r == NULL)
+    ERROR(GS_ERROR_NODE_NOT_FOUND);
     
-    iterator = _gs_graph_iterator_bfs_create(graph);
-    iterator->candidats        = eina_list_append(iterator->candidats, r);
-    iterator->circle_remaining = 1;
-    iterator->make_hop         = make_hop;
+  iterator = _gs_graph_iterator_bfs_create(graph);
+  iterator->candidats        = eina_list_append(iterator->candidats, r);
+  iterator->circle_remaining = 1;
+  iterator->make_hop         = make_hop;
 
-    return (iterator_t*) iterator;
-  }
-
-  return NULL;
+  return (iterator_t*) iterator;
 }
 
 GSAPI unsigned int
