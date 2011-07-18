@@ -43,7 +43,7 @@ _bfs_hash_free(void *data)
 
 GSAPI static Eina_Bool
 _bfs_next(graph_iterator_bfs *iterator,
-			    void **data)
+	  void              **data)
 {
   node_t *next;
 

@@ -2,6 +2,7 @@
 #include "gs_stream_dgs.h"
 #include "gs_graph_bfs.h"
 #include "gs_algorithm_diameter.h"
+#include "gs_matrix.h"
 
 static void print_id_cb(void *n, void **data)
 {
@@ -170,13 +171,35 @@ test_diameter()
   printf("Diameter : %d\n", d);
 }
 
+void
+test_matrix()
+{
+  matrix_t *m;
+  source_dgs_t *in;
+  
+  m = gs_matrix_new();
+  in = gs_stream_source_file_dgs_open("sample.dgs");
+
+  gs_stream_source_sink_add(GS_SOURCE(in),
+			    GS_SINK(m));
+
+  while(gs_stream_source_file_dgs_next(in))
+    ;
+
+  gs_stream_source_file_dgs_close(in);
+
+  gs_matrix_print(m, stdout);
+
+  gs_matrix_destroy(m);
+}
+
 int
 main(int argc, char **argv)
 {
   if (!gs_init())
     return EXIT_FAILURE;
   
-  test_diameter();
+  test_matrix();
 
   gs_shutdown();
 
