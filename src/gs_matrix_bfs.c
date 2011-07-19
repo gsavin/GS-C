@@ -25,14 +25,12 @@ _bfs_candidat_add(matrix_iterator_bfs *iterator,
 		  int candidat,
 		  int depth)
 {
-  if (iterator->closed [candidat] < 0) {  
-    iterator->stack [iterator->candidat] = candidat;
-    iterator->candidat                  += 1;
-    iterator->closed [candidat]          = depth;
-
-    if (depth > iterator->depth_max)
-      iterator->depth_max = depth;
-  }
+  iterator->stack [iterator->candidat] = candidat;
+  iterator->candidat                  += 1;
+  iterator->closed [candidat]          = depth;
+  
+  if (depth > iterator->depth_max)
+    iterator->depth_max = depth;
 }
 
 GSAPI static Eina_Bool
@@ -40,8 +38,9 @@ _bfs_next(matrix_iterator_bfs *iterator,
 	  void               **data)
 {
   if (iterator->looking < iterator->candidat) {
-    int i, n, c;
-    matrix_t *m;
+    int i, n, c, o;
+    matrix_t     *m;
+    matrix_cell **cells;
 
     m = iterator->matrix;
     n = iterator->stack [iterator->looking];
@@ -50,12 +49,18 @@ _bfs_next(matrix_iterator_bfs *iterator,
 
     iterator->looking += 1;
 
-    c = gs_matrix_row_cell_count(m, n);
-
-    for (i = 0; i < c; i++)
-      _bfs_candidat_add(iterator,
-			gs_matrix_row_cell_nth_target(m, n, i),
-			iterator->closed [n] + 1);
+    c     = m->rows [n]->degree;
+    cells = m->rows [n]->cells;
+    
+    for (i = 0; i < c; i++) {
+      o = cells [i]->target->index;
+      
+      if (o == n)
+	o = cells [i]->source->index;
+      
+      if (iterator->closed [o] < 0) 
+	_bfs_candidat_add(iterator, o, iterator->closed [n] + 1);
+    }
     
     return EINA_TRUE;
   }
@@ -82,18 +87,6 @@ _bfs_free(matrix_iterator_bfs *iterator)
   free(iterator);
 }
 
-GSAPI static void
-_bfs_lock(matrix_iterator_bfs *iterator)
-{
-  // TODO
-}
-
-GSAPI static void
-_bfs_unlock(matrix_iterator_bfs *iterator)
-{
-  // TODO
-}
-
 GSAPI static inline matrix_iterator_bfs *
 _gs_matrix_iterator_bfs_create(const matrix_t *matrix)
 {
@@ -107,8 +100,8 @@ _gs_matrix_iterator_bfs_create(const matrix_t *matrix)
   iterator->parent.next          = FUNC_ITERATOR_NEXT(_bfs_next);
   iterator->parent.get_container = FUNC_ITERATOR_GET_CONTAINER(_bfs_get_container);
   iterator->parent.free          = FUNC_ITERATOR_FREE(_bfs_free);
-  iterator->parent.lock          = FUNC_ITERATOR_LOCK(_bfs_lock);
-  iterator->parent.unlock        = FUNC_ITERATOR_LOCK(_bfs_unlock);
+  iterator->parent.lock          = FUNC_ITERATOR_LOCK(NULL);
+  iterator->parent.unlock        = FUNC_ITERATOR_LOCK(NULL);
 
   iterator->matrix    = matrix;
   iterator->closed    = (int*) malloc(matrix->nodes * sizeof(int));
@@ -163,7 +156,7 @@ gs_matrix_iterator_bfs_reset_from_index(iterator_t *iterator,
   }
 }
 
-GSAPI int
+GSAPI inline int
 gs_matrix_iterator_bfs_index_next(iterator_t *iterator)
 {
   int index [1];

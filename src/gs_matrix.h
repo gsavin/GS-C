@@ -15,6 +15,10 @@
 # define GS_MATRIX_ALLOC_STEP 128
 #endif
 
+#ifndef GS_MATRIX_ROW_CELLS_ALLOC
+#define GS_MATRIX_ROW_CELLS_ALLOC 8
+#endif
+
 typedef unsigned int        matrix_index_t;
 typedef struct _matrix      matrix_t;
 typedef struct _matrix_row  matrix_row;
@@ -35,8 +39,10 @@ struct _matrix {
 };
 
 struct _matrix_row {
-  unsigned int index;
-  Eina_List   *cells;
+  unsigned int  index;
+  int           degree;
+  int           size;
+  matrix_cell **cells;
 };
 
 struct _matrix_cell {
@@ -73,6 +79,10 @@ GSAPI void gs_matrix_print(const matrix_t *matrix,
 GSAPI inline int
 gs_matrix_row_cell_count(const matrix_t *matrix,
 			 int index);
+
+GSAPI inline matrix_cell**
+gs_matrix_row_cells_get(const matrix_t *matrix,
+			     int index);
 
 GSAPI inline int
 gs_matrix_row_cell_nth_index(const matrix_t *matrix,

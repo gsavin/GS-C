@@ -41,7 +41,7 @@ _gs_matrix_sink_callback(const sink_t *sink,
 GSAPI static void
 _matrix_hash_node_free_cb(matrix_row *data)
 {
-  eina_list_free(data->cells);
+  free(data->cells);
   free(data);
 }
 
@@ -157,8 +157,10 @@ gs_matrix_node_add(matrix_t    *matrix,
   element_id_t nid;
 
   row = (matrix_row*) malloc(sizeof(matrix_row));
-  row->index = matrix->nodes;
-  row->cells = NULL;
+  row->index  = matrix->nodes;
+  row->cells  = NULL;
+  row->degree = 0;
+  row->size   = 0;
 
   matrix->nodes += 1;
   _check_size(matrix);
@@ -168,12 +170,15 @@ gs_matrix_node_add(matrix_t    *matrix,
 
   matrix->node_ids          = eina_list_append(matrix->node_ids, nid);
   matrix->rows [row->index] = row;
-  /*
-  for (i = 0; i <= row->index; i++) {
-    matrix->data [EDGE_INDEX(matrix, i, row->index)] = NULL;
-    matrix->data [EDGE_INDEX(matrix, row->index, i)] = NULL;
+}
+
+GSAPI static inline void
+_check_row_size(matrix_row *row)
+{
+  if (row->size <= row->degree) {
+    row->size += GS_MATRIX_ROW_CELLS_ALLOC;
+    row->cells = (matrix_cell**) realloc(row->cells, row->size * sizeof(matrix_cell*));
   }
-  */
 }
 
 GSAPI void
@@ -216,7 +221,10 @@ gs_matrix_edge_add(matrix_t    *matrix,
     eina_hash_add(matrix->edge_id2index, id, cell);
     
     matrix->data [EDGE_INDEX(matrix, s, t)] = cell;
-    cell->source->cells = eina_list_append(cell->source->cells, cell);
+
+    cell->source->degree += 1;
+    _check_row_size(cell->source);
+    cell->source->cells [cell->source->degree - 1] = cell;
   }
   else
     EINA_LOG_WARN("edge already exists between these nodes");
@@ -226,7 +234,10 @@ gs_matrix_edge_add(matrix_t    *matrix,
       ERROR(GS_ERROR_ID_ALREADY_IN_USE);
     
     matrix->data [EDGE_INDEX(matrix, t, s)] = cell;
-    cell->target->cells = eina_list_append(cell->target->cells, cell);
+    
+    cell->target->degree += 1;
+    _check_row_size(cell->target);
+    cell->target->cells [cell->target->degree - 1] = cell;
   }
 }
 
@@ -292,6 +303,13 @@ gs_matrix_row_cell_count(const matrix_t *matrix,
 			 int index)
 {
   return eina_list_count(matrix->rows [index]->cells);
+}
+
+GSAPI inline matrix_cell**
+gs_matrix_row_cells_get(const matrix_t *matrix,
+			     int index)
+{
+  return matrix->rows [index]->cells;
 }
 
 GSAPI inline int
