@@ -170,6 +170,26 @@ gs_matrix_iterator_bfs_index_next(iterator_t *iterator)
 }
 
 GSAPI int
+gs_matrix_unweighted_eccentricity(const matrix_t *matrix,
+				  int index)
+{
+  matrix_iterator_bfs *iterator;
+  void *data;
+  int d;
+
+  iterator = _gs_matrix_iterator_bfs_create(matrix);
+  _bfs_candidat_add(iterator, index, 0);
+  
+  while (_bfs_next(iterator, &data) == EINA_TRUE)
+    ;
+
+  d = iterator->depth_max;
+  gs_iterator_free(iterator);
+
+  return d;
+}
+
+GSAPI int
 gs_matrix_iterator_bfs_depth_max_get(iterator_t *iterator)
 {
   CHECK_MATRIX_BFS_ITERATOR_MAGIC((matrix_iterator_bfs*) iterator, -1);

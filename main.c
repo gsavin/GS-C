@@ -237,7 +237,6 @@ void
 test_matrix_bfs()
 {
   matrix_t *m;
-  iterator_t *it;
   int idx, d, t;
   source_dgs_t *in;
   clock_t c1, c2, c3;
@@ -280,28 +279,15 @@ test_matrix_bfs()
   */
   c2 = clock();
   
-  //printf("---- start %d ----\n", 0);
-  it = gs_matrix_iterator_bfs_new_from_index(m, 0);
-
   for (idx = 0; idx < m->nodes; idx++) {
 
-    while (gs_matrix_iterator_bfs_index_next(it) >= 0)
-      ;
-
-    t = gs_matrix_iterator_bfs_depth_max_get(it);
+    t = gs_matrix_unweighted_eccentricity(m, idx);
 
     //printf("[%d] %d\n", idx, t);
 
     if (t > d)
       d = t;
-
-    if (idx + 1 < m->nodes) {
-      //printf("---- start %d ----\n", idx + 1);
-      gs_matrix_iterator_bfs_reset_from_index(it, idx + 1);
-    }
   }
-
-  gs_iterator_free(it);
 
   c3 = clock();
 
