@@ -23,13 +23,13 @@ gs_shutdown()
   eina_shutdown();
 }
 
-GSAPI void
+GSAPI inline void
 gs_iterator_free(iterator_t *it)
 {
   eina_iterator_free(it);
 }
 
-GSAPI node_t*
+GSAPI inline node_t*
 gs_iterator_next_node(const iterator_t *it)
 {
   node_t *next;
@@ -40,7 +40,7 @@ gs_iterator_next_node(const iterator_t *it)
   return next;
 }
 
-GSAPI edge_t*
+GSAPI inline edge_t*
 gs_iterator_next_edge(const iterator_t *it)
 {
   edge_t *next;

@@ -23,7 +23,7 @@ GSAPI edge_t* gs_edge_create(const graph_t*,
 
 GSAPI void gs_edge_destroy(edge_t*);
 
-GSAPI node_t* gs_edge_oposite_get(const edge_t *edge,
-				  const node_t *node);
+#define GS_EDGE_OPOSITE_OF(e,n)			\
+  (e->source == n ? e->target : e->source)
 
 #endif /* _GS_EDGE_H_ */

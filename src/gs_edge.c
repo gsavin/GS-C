@@ -36,14 +36,3 @@ gs_edge_destroy(edge_t *edge)
   free(edge);
 }
 
-GSAPI node_t*
-gs_edge_oposite_get(const edge_t *edge,
-		    const node_t *node)
-{
-  if(node == edge->source)
-    return edge->target;
-  else if(node == edge->target)
-    return edge->source;
-  else
-    ERROR(GS_ERROR_NODE_NOT_FOUND);
-}

@@ -53,7 +53,7 @@ gs_node_edge_register(node_t *node,
   }
 }
 
-GSAPI iterator_t*
+GSAPI inline iterator_t*
 gs_node_edge_iterator_new(const node_t *node)
 {
   return eina_list_iterator_new(node->edges);

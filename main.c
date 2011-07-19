@@ -115,11 +115,14 @@ test_bfs()
   node_t *n;
   int d, t;
   source_dgs_t *in;
+  clock_t t1, t2;
+
+  t1 = clock();
 
   d = 0;
   g = gs_graph_create("g");
   
-  in = gs_stream_source_file_dgs_open("test.dgs");
+  in = gs_stream_source_file_dgs_open("sample.dgs");
 
   gs_stream_source_sink_add(GS_SOURCE(in),
 			    GS_SINK(g));
@@ -128,7 +131,11 @@ test_bfs()
     ;
 
   gs_stream_source_file_dgs_close(in);
-  
+
+  t2 = clock();
+
+  printf("read in %dms\n", (t2-t1) / (CLOCKS_PER_SEC / 1000));
+
   /*
   gs_graph_node_add(g, "A");
   gs_graph_node_add(g, "A1");
@@ -151,9 +158,9 @@ test_bfs()
 
   it1 = gs_graph_node_iterator_new(g);
   n = gs_iterator_next_node(it1);
+  it2 = gs_graph_iterator_bfs_new_from_root(g, n);
 
   while(n != NULL) {
-    it2 = gs_graph_iterator_bfs_new_from_root(g, n, GS_FALSE);
 
     while (gs_iterator_next_node(it2) != NULL)
       ;
@@ -165,10 +172,15 @@ test_bfs()
 
     //printf("[%s] %d\n", gs_element_id_get(GS_ELEMENT(n)), t);
 
-    gs_iterator_free(it2);
     n = gs_iterator_next_node(it1);
+    gs_graph_iterator_bfs_reset_from_root(it2, n);
   }
 
+  gs_iterator_free(it2);
+
+  t1 = clock();
+
+  printf("computed in %dms\n", (t1-t2) / (CLOCKS_PER_SEC / 1000));
   printf("Max depth : %d\n", d);
 
   gs_iterator_free(it1);
@@ -228,6 +240,9 @@ test_matrix_bfs()
   iterator_t *it;
   int idx, d, t;
   source_dgs_t *in;
+  clock_t c1, c2, c3;
+
+  c1 = clock();
 
   d = 0;
   m = gs_matrix_new();
@@ -260,12 +275,16 @@ test_matrix_bfs()
   gs_matrix_edge_add(m, "05", "A2", "A22", GS_FALSE);
   gs_matrix_edge_add(m, "06", "A22", "A221", GS_FALSE);
   gs_matrix_edge_add(m, "07", "A22", "A222", GS_FALSE);
-  */
-  //gs_matrix_print(m, stdout);
   
+  gs_matrix_print(m, stdout);
+  */
+  c2 = clock();
+  
+  //printf("---- start %d ----\n", 0);
+  it = gs_matrix_iterator_bfs_new_from_index(m, 0);
 
   for (idx = 0; idx < m->nodes; idx++) {
-    it = gs_matrix_iterator_bfs_new_from_index(m, idx);
+
     while (gs_matrix_iterator_bfs_index_next(it) >= 0)
       ;
 
@@ -276,10 +295,20 @@ test_matrix_bfs()
     if (t > d)
       d = t;
 
-    gs_iterator_free(it);
+    if (idx + 1 < m->nodes) {
+      //printf("---- start %d ----\n", idx + 1);
+      gs_matrix_iterator_bfs_reset_from_index(it, idx + 1);
+    }
   }
 
-  printf("Max depth : %d\n", t);
+  gs_iterator_free(it);
+
+  c3 = clock();
+
+  printf("read in %dms\ncomputed in %dms\n",
+	 (c2-c1) / (CLOCKS_PER_SEC / 1000), 
+	 (c3-c2) / (CLOCKS_PER_SEC / 1000));
+  printf("Max depth : %d\n", d);
 
   gs_matrix_destroy(m);
 }

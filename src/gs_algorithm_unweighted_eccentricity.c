@@ -35,8 +35,7 @@ gs_algorithm_unweighted_eccentricity(const graph_t *graph,
 {
   iterator_t *it;
   it = gs_graph_iterator_bfs_new_from_root(graph,
-					   node,
-					   GS_FALSE);
+					   node);
 
   return _unweighted_eccentricity(it);
 }
