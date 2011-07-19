@@ -276,8 +276,9 @@ test_matrix_bfs()
   gs_matrix_edge_add(m, "06", "A22", "A221", GS_FALSE);
   gs_matrix_edge_add(m, "07", "A22", "A222", GS_FALSE);
   
-  gs_matrix_print(m, stdout);
   */
+  //  gs_matrix_print(m, stdout);
+
   c2 = clock();
   
   //printf("---- start %d ----\n", 0);

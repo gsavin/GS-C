@@ -211,25 +211,24 @@ gs_matrix_edge_add(matrix_t    *matrix,
   if (cell != NULL)
     ERROR(GS_ERROR_ID_ALREADY_IN_USE);
 
-  if (matrix->data [EDGE_INDEX(matrix, s, t)] == NULL) {
-    cell         = (matrix_cell*) malloc(sizeof(matrix_cell));
-    cell->id     = gs_id_copy(id);
-    cell->source = matrix->rows [s];
-    cell->target = matrix->rows [t];
-    cell->weight = 1.0;
-    
-    eina_hash_add(matrix->edge_id2index, id, cell);
-    
-    matrix->data [EDGE_INDEX(matrix, s, t)] = cell;
+  if (matrix->data [EDGE_INDEX(matrix, s, t)] != NULL)
+    ERROR(GS_ERROR_ID_ALREADY_IN_USE);
+  
+  cell         = (matrix_cell*) malloc(sizeof(matrix_cell));
+  cell->id     = gs_id_copy(id);
+  cell->source = matrix->rows [s];
+  cell->target = matrix->rows [t];
+  cell->weight = 1.0;
+  
+  eina_hash_add(matrix->edge_id2index, id, cell);
+  
+  matrix->data [EDGE_INDEX(matrix, s, t)] = cell;
+  
+  cell->source->degree += 1;
+  _check_row_size(cell->source);
+  cell->source->cells [cell->source->degree - 1] = cell;
 
-    cell->source->degree += 1;
-    _check_row_size(cell->source);
-    cell->source->cells [cell->source->degree - 1] = cell;
-  }
-  else
-    EINA_LOG_WARN("edge already exists between these nodes");
-
-  if (!directed) {
+  if (directed == GS_FALSE) {
     if (matrix->data [EDGE_INDEX(matrix, t, s)] != NULL)
       ERROR(GS_ERROR_ID_ALREADY_IN_USE);
     
