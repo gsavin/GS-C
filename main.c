@@ -231,7 +231,7 @@ test_matrix_bfs()
 
   d = 0;
   m = gs_matrix_new();
-  /*
+  
   in = gs_stream_source_file_dgs_open("sample.dgs");
 
   gs_stream_source_sink_add(GS_SOURCE(in),
@@ -241,8 +241,8 @@ test_matrix_bfs()
     ;
 
   gs_stream_source_file_dgs_close(in);
-  */
   
+  /*
   gs_matrix_node_add(m, "A");
   gs_matrix_node_add(m, "A1");
   gs_matrix_node_add(m, "A2");
@@ -260,7 +260,7 @@ test_matrix_bfs()
   gs_matrix_edge_add(m, "05", "A2", "A22", GS_FALSE);
   gs_matrix_edge_add(m, "06", "A22", "A221", GS_FALSE);
   gs_matrix_edge_add(m, "07", "A22", "A222", GS_FALSE);
-  
+  */
   //gs_matrix_print(m, stdout);
   
 
