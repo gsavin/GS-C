@@ -231,6 +231,21 @@ gs_matrix_edge_weight_set(matrix_t    *matrix,
   
 }
 
+GSAPI real_t
+gs_matrix_edge_weight_get(const matrix_t *matrix,
+			  int source,
+			  int target)
+{
+  return (real_t) matrix->data [EDGE_INDEX(matrix, source, target)];
+}
+
+GSAPI element_id_t
+gs_matrix_node_id_get(const matrix_t *matrix,
+		 int index)
+{
+  return (element_id_t) eina_list_nth(matrix->node_ids, index);
+}
+
 GSAPI void
 gs_matrix_print(const matrix_t *matrix,
 		FILE *out)

@@ -45,6 +45,13 @@ GSAPI void gs_matrix_edge_add(matrix_t    *matrix,
 			      element_id_t trg,
 			      bool_t       directed);
 
+GSAPI real_t gs_matrix_edge_weight_get(const matrix_t *matrix,
+				       int source,
+				       int target);
+
+GSAPI element_id_t gs_matrix_node_id_get(const matrix_t *matrix,
+					 int index);
+
 GSAPI void gs_matrix_print(const matrix_t *matrix,
 			   FILE *out);
 

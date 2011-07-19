@@ -1,4 +1,4 @@
-CC=gcc -fpic -O2
+CC=gcc -fpic -O3
 DEFS=
 #DEFS+=-DDEBUG
 OBJS=main.o

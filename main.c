@@ -111,10 +111,25 @@ void
 test_bfs()
 {
   graph_t *g;
-  iterator_t *it;
+  iterator_t *it1, *it2;
   node_t *n;
+  int d, t;
+  source_dgs_t *in;
 
+  d = 0;
   g = gs_graph_create("g");
+  
+  in = gs_stream_source_file_dgs_open("test.dgs");
+
+  gs_stream_source_sink_add(GS_SOURCE(in),
+			    GS_SINK(g));
+
+  while(gs_stream_source_file_dgs_next(in))
+    ;
+
+  gs_stream_source_file_dgs_close(in);
+  
+  /*
   gs_graph_node_add(g, "A");
   gs_graph_node_add(g, "A1");
   gs_graph_node_add(g, "A2");
@@ -132,18 +147,31 @@ test_bfs()
   gs_graph_edge_add(g, "05", "A2", "A22", GS_FALSE);
   gs_graph_edge_add(g, "06", "A22", "A221", GS_FALSE);
   gs_graph_edge_add(g, "07", "A22", "A222", GS_FALSE);
+  */
 
-  it = gs_graph_iterator_bfs_new_from_root_id(g, "A", GS_FALSE);
-  n = gs_iterator_next_node(it);
+  it1 = gs_graph_node_iterator_new(g);
+  n = gs_iterator_next_node(it1);
 
   while(n != NULL) {
-    printf("- \"%s\"\n", gs_element_id_get(GS_ELEMENT(n)));
-    n = gs_iterator_next_node(it);
+    it2 = gs_graph_iterator_bfs_new_from_root(g, n, GS_FALSE);
+
+    while (gs_iterator_next_node(it2) != NULL)
+      ;
+    
+    t = gs_graph_iterator_bfs_depth_max(it2);
+
+    if (t > d)
+      d = t;
+
+    //printf("[%s] %d\n", gs_element_id_get(GS_ELEMENT(n)), t);
+
+    gs_iterator_free(it2);
+    n = gs_iterator_next_node(it1);
   }
 
-  printf("Max depth : %d\n", gs_graph_iterator_bfs_depth_max(it));
+  printf("Max depth : %d\n", d);
 
-  gs_iterator_free(it);
+  gs_iterator_free(it1);
   gs_graph_destroy(g);
 }
 
@@ -193,13 +221,76 @@ test_matrix()
   gs_matrix_destroy(m);
 }
 
+void
+test_matrix_bfs()
+{
+  matrix_t *m;
+  iterator_t *it;
+  int idx, d, t;
+  source_dgs_t *in;
+
+  d = 0;
+  m = gs_matrix_new();
+  /*
+  in = gs_stream_source_file_dgs_open("sample.dgs");
+
+  gs_stream_source_sink_add(GS_SOURCE(in),
+			    GS_SINK(m));
+
+  while(gs_stream_source_file_dgs_next(in))
+    ;
+
+  gs_stream_source_file_dgs_close(in);
+  */
+  
+  gs_matrix_node_add(m, "A");
+  gs_matrix_node_add(m, "A1");
+  gs_matrix_node_add(m, "A2");
+  gs_matrix_node_add(m, "A3");
+  gs_matrix_node_add(m, "A21");
+  gs_matrix_node_add(m, "A22");
+  gs_matrix_node_add(m, "A221");
+  gs_matrix_node_add(m, "A222");
+
+  gs_matrix_edge_add(m, "01", "A", "A1", GS_FALSE);
+  gs_matrix_edge_add(m, "02", "A", "A2", GS_FALSE);
+  gs_matrix_edge_add(m, "03", "A", "A3", GS_FALSE);
+
+  gs_matrix_edge_add(m, "04", "A2", "A21", GS_FALSE);
+  gs_matrix_edge_add(m, "05", "A2", "A22", GS_FALSE);
+  gs_matrix_edge_add(m, "06", "A22", "A221", GS_FALSE);
+  gs_matrix_edge_add(m, "07", "A22", "A222", GS_FALSE);
+  
+  //gs_matrix_print(m, stdout);
+  
+
+  for (idx = 0; idx < m->nodes; idx++) {
+    it = gs_matrix_iterator_bfs_new_from_index(m, idx);
+    while (gs_matrix_iterator_bfs_index_next(it) >= 0)
+      ;
+
+    t = gs_matrix_iterator_bfs_depth_max_get(it);
+
+    //printf("[%d] %d\n", idx, t);
+
+    if (t > d)
+      d = t;
+
+    gs_iterator_free(it);
+  }
+
+  printf("Max depth : %d\n", t);
+
+  gs_matrix_destroy(m);
+}
+
 int
 main(int argc, char **argv)
 {
   if (!gs_init())
     return EXIT_FAILURE;
   
-  test_matrix();
+  test_matrix_bfs();
 
   gs_shutdown();
 
