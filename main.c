@@ -241,6 +241,10 @@ test_matrix_bfs()
   int idx, d, t;
   source_dgs_t *in;
   clock_t c1, c2, c3;
+  int *stack, *closed;
+
+  stack = NULL;
+  closed = NULL;
 
   c1 = clock();
 
@@ -282,11 +286,13 @@ test_matrix_bfs()
   c2 = clock();
   
   //printf("---- start %d ----\n", 0);
-  it = gs_matrix_iterator_bfs_new_from_index(m, 0);
+  //it = gs_matrix_iterator_bfs_new_from_index(m, 0);
+
+  printf("%d nodes; %d edges\n", m->nodes, m->edges);
 
   for (idx = 0; idx < m->nodes; idx++) {
 
-    t = gs_matrix_unweighted_eccentricity(m, idx, it);
+    t = gs_matrix_unweighted_eccentricity(m, idx, &stack, &closed);
 
     //printf("[%d] %d\n", idx, t);
 
@@ -294,7 +300,7 @@ test_matrix_bfs()
       d = t;
   }
 
-  gs_iterator_free(it);
+  //gs_iterator_free(it);
 
   c3 = clock();
 

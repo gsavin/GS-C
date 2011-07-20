@@ -1,4 +1,4 @@
-CC=gcc -fpic -O3
+CC=gcc -fPIC -O3
 # -g -pg
 DEFS=
 #DEFS+=-DDEBUG

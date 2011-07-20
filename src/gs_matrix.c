@@ -39,9 +39,8 @@ _gs_matrix_sink_callback(const sink_t *sink,
 }
 
 GSAPI static void
-_matrix_hash_node_free_cb(matrix_row *data)
+_matrix_hash_node_free_cb(int *data)
 {
-  free(data->cells);
   free(data);
 }
 
@@ -55,27 +54,46 @@ _matrix_hash_edge_free_cb(matrix_cell *data)
 GSAPI static inline void
 _check_size(matrix_t *matrix)
 {
-  if(matrix->size < SQR(matrix->nodes) * sizeof(matrix_cell*)) {
-    int i;
+  if(matrix->epr <= matrix->nodes || matrix->davg <= matrix->degree_max) {
+    int i, e, d, s, *cells;
 
     EINA_LOG_DBG("not enought memory, make realloc");
 
-    i = SQR(matrix->epr);
+    e = matrix->epr;
+    d = matrix->davg;
+    s = matrix->size;
+    i = matrix->epr * matrix->davg;
 
-    matrix->epr  = (matrix->nodes / GS_MATRIX_ALLOC_STEP + 1) * GS_MATRIX_ALLOC_STEP;
-    matrix->size = SQR(matrix->epr) * sizeof(matrix_cell*);
-    matrix->data = (matrix_cell**) realloc(matrix->data, matrix->size);
-    matrix->rows = (matrix_row**) realloc(matrix->rows, matrix->epr * sizeof(matrix_row*));
+    if(matrix->epr <= matrix->nodes) {
+      matrix->epr  = matrix->nodes / GS_MATRIX_ROW_ALLOC_STEP + 1;
+      matrix->epr *= GS_MATRIX_ROW_ALLOC_STEP;
+    }
 
-    for (; i < SQR(matrix->epr); i++)
-      matrix->data [i] = NULL;
+    if (matrix->davg <= matrix->degree_max) {
+      matrix->davg  = matrix->degree_max / GS_MATRIX_COLUMN_ALLOC_STEP + 1;
+      matrix->davg *= GS_MATRIX_COLUMN_ALLOC_STEP;
+    }
+
+    matrix->size    = matrix->epr * matrix->davg * sizeof(int);
+    matrix->degrees = (int*) realloc(matrix->degrees, matrix->epr * sizeof(int));
+    memset(matrix->degrees + e, 0, (matrix->epr - e) * sizeof(int));
+
+    cells = (int*) malloc(matrix->size);
+    memset(cells + i, 0, matrix->size - s);
+
+
+    for (i = 0; i < e; i++)
+      memcpy(cells + i * matrix->davg, matrix->cells + i * d, d * sizeof(int));
+
+    free(matrix->cells);
+    matrix->cells = cells;
 
     EINA_LOG_DBG("matrix size : %d bytes", matrix->size);
   }
 }
 
-GSAPI static inline matrix_row*
-_row_get(const matrix_t *matrix,
+GSAPI static inline int*
+_node_index_get(const matrix_t *matrix,
 	 element_id_t id)
 {
   return eina_hash_find(matrix->node_id2index, id);
@@ -102,12 +120,15 @@ gs_matrix_new()
 
   EINA_MAGIC_SET(m, GS_MATRIX_MAGIC);
 
-  m->size          = 0;
   m->epr           = 0;
-  m->data          = NULL;
+  m->davg          = 0;
+  m->degree_max    = 0;
+  m->size          = 0;
   m->nodes         = 0;
   m->edges         = 0;
-  m->rows          = NULL;
+  m->cells         = NULL;
+  m->weights       = NULL;
+  m->degrees       = NULL;
   m->node_id2index = GS_MATRIX_ID_HASH_FUNCTION(EINA_FREE_CB(_matrix_hash_node_free_cb));
   m->node_ids      = NULL;
   m->edge_id2index = GS_MATRIX_ID_HASH_FUNCTION(EINA_FREE_CB(_matrix_hash_edge_free_cb));
@@ -130,8 +151,8 @@ gs_matrix_destroy(matrix_t *matrix)
   EINA_LIST_FREE(matrix->node_ids, id)
     gs_id_release(id);
 
-  free(matrix->rows);
-  free(matrix->data);
+  free(matrix->cells);
+  free(matrix->degrees);
   free(matrix);
 }
 
@@ -139,11 +160,11 @@ GSAPI int
 gs_matrix_node_index_get(const matrix_t *m,
 			 element_id_t id)
 {
-  matrix_row *row;
-  row = _row_get(m, id);
+  int *index;
+  index = _node_index_get(m, id);
 
-  if (row != NULL)
-    return row->index;
+  if (index != NULL)
+    return *index;
 
   return -1;
 }
@@ -153,32 +174,21 @@ gs_matrix_node_add(matrix_t    *matrix,
 		   element_id_t id)
 {
   int i;
-  matrix_row *row;
+  int *index;
   element_id_t nid;
 
-  row = (matrix_row*) malloc(sizeof(matrix_row));
-  row->index  = matrix->nodes;
-  row->cells  = NULL;
-  row->degree = 0;
-  row->size   = 0;
+  index  = (int*) malloc(sizeof(int));
+  *index = matrix->nodes;
 
   matrix->nodes += 1;
   _check_size(matrix);
 
+  matrix->degrees [*index] = 0;
+
   nid = gs_id_copy(id);
-  eina_hash_add(matrix->node_id2index, nid, row);
+  eina_hash_add(matrix->node_id2index, nid, index);
 
-  matrix->node_ids          = eina_list_append(matrix->node_ids, nid);
-  matrix->rows [row->index] = row;
-}
-
-GSAPI static inline void
-_check_row_size(matrix_row *row)
-{
-  if (row->size <= row->degree) {
-    row->size += GS_MATRIX_ROW_CELLS_ALLOC;
-    row->cells = (matrix_cell**) realloc(row->cells, row->size * sizeof(matrix_cell*));
-  }
+  matrix->node_ids = eina_list_append(matrix->node_ids, nid);
 }
 
 GSAPI void
@@ -211,32 +221,39 @@ gs_matrix_edge_add(matrix_t    *matrix,
   if (cell != NULL)
     ERROR(GS_ERROR_ID_ALREADY_IN_USE);
 
+#ifdef GS_MATRIX_HUGE
   if (matrix->data [EDGE_INDEX(matrix, s, t)] != NULL)
     ERROR(GS_ERROR_ID_ALREADY_IN_USE);
+#endif
   
   cell         = (matrix_cell*) malloc(sizeof(matrix_cell));
   cell->id     = gs_id_copy(id);
-  cell->source = matrix->rows [s];
-  cell->target = matrix->rows [t];
-  cell->weight = 1.0;
+  cell->source = s;
+  cell->target = t;
   
   eina_hash_add(matrix->edge_id2index, id, cell);
   
-  matrix->data [EDGE_INDEX(matrix, s, t)] = cell;
+  matrix->edges       += 1;
+  matrix->degrees [s] += 1;
   
-  cell->source->degree += 1;
-  _check_row_size(cell->source);
-  cell->source->cells [cell->source->degree - 1] = cell;
+  if (matrix->degrees [s] > matrix->degree_max)
+    matrix->degree_max = matrix->degrees [s];
 
   if (directed == GS_FALSE) {
-    if (matrix->data [EDGE_INDEX(matrix, t, s)] != NULL)
-      ERROR(GS_ERROR_ID_ALREADY_IN_USE);
-    
-    matrix->data [EDGE_INDEX(matrix, t, s)] = cell;
-    
-    cell->target->degree += 1;
-    _check_row_size(cell->target);
-    cell->target->cells [cell->target->degree - 1] = cell;
+    matrix->degrees [t] += 1;
+
+    if (matrix->degrees [s] > matrix->degree_max)
+      matrix->degree_max = matrix->degrees [s];
+  }
+
+  _check_size(matrix);
+
+  matrix->cells   [N_INDEX(matrix, s, matrix->degrees [s] - 1)] = t;
+  //matrix->weights [N_INDEX(matrix, s, matrix->degrees [s] - 1)] = 1;
+
+  if (directed == GS_FALSE) {
+    matrix->cells   [N_INDEX(matrix, t, matrix->degrees [t] - 1)] = s;
+    //matrix->weights [N_INDEX(matrix, t, matrix->degrees [t] - 1)] = 1;
   }
 }
 
@@ -246,13 +263,7 @@ gs_matrix_edge_weight_set(matrix_t    *matrix,
 			  element_id_t id,
 			  real_t       weight)
 {
-  matrix_cell *cell;
-  cell = _cell_get(matrix, id);
-
-  if (index == NULL)
-    ERROR(GS_ERROR_EDGE_NOT_FOUND);
-
-  cell->weight = weight;
+  
 }
 
 GSAPI inline real_t
@@ -261,10 +272,6 @@ gs_matrix_edge_weight_get(const matrix_t *matrix,
 			  int target)
 {
   matrix_cell *cell;
-  cell =matrix->data [EDGE_INDEX(matrix, source, target)];
-
-  if (cell != NULL)
-    return cell->weight;
 
   return 0;
 }
@@ -280,48 +287,6 @@ GSAPI void
 gs_matrix_print(const matrix_t *matrix,
 		FILE *out)
 {
-  int i, j;
-
-  for (i = 0; i < matrix->nodes; i++) {
-    for (j = 0; j < matrix->nodes; j++)
-      fprintf(out, "%.0f ", gs_matrix_edge_weight_get(matrix, i, j));
-    fprintf(out, "\n");
-    fflush(out);
-  }    
+  
 }
 
-GSAPI inline iterator_t*
-gs_matrix_row_cell_iterator_new(const matrix_t* matrix,
-				int index)
-{
-  return eina_list_iterator_new(matrix->rows [index]->cells);
-}
-
-GSAPI inline int
-gs_matrix_row_cell_count(const matrix_t *matrix,
-			 int index)
-{
-  return eina_list_count(matrix->rows [index]->cells);
-}
-
-GSAPI inline matrix_cell**
-gs_matrix_row_cells_get(const matrix_t *matrix,
-			     int index)
-{
-  return matrix->rows [index]->cells;
-}
-
-GSAPI inline int
-gs_matrix_row_cell_nth_target(const matrix_t *matrix,
-			      int index,
-			      int neighbor)
-{
-  matrix_cell *cell;
-  cell = (matrix_cell*) eina_list_nth(matrix->rows [index]->cells, neighbor);
-
-  if (cell != NULL)
-    return cell->source->index == index ?
-      cell->target->index : cell->source->index;
-
-  return -1;
-}

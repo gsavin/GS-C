@@ -25,46 +25,20 @@ _bfs_candidat_add(matrix_iterator_bfs *iterator,
 		  int candidat,
 		  int depth)
 {
-  iterator->stack [iterator->candidat] = candidat;
-  iterator->candidat                  += 1;
-  iterator->closed [candidat]          = depth;
-  
-  if (depth > iterator->depth_max)
-    iterator->depth_max = depth;
+  if (iterator->closed [candidat] < 0) {
+    iterator->stack [iterator->candidat] = candidat;
+    iterator->candidat                  += 1;
+    iterator->closed [candidat]          = depth;
+    
+    if (depth > iterator->depth_max)
+      iterator->depth_max = depth;
+  }
 }
 
-GSAPI static Eina_Bool
+GSAPI static inline Eina_Bool
 _bfs_next(matrix_iterator_bfs *iterator,
 	  void               **data)
 {
-  if (iterator->looking < iterator->candidat) {
-    int i, n, c, o;
-    matrix_t     *m;
-    matrix_cell **cells;
-
-    m = iterator->matrix;
-    n = iterator->stack [iterator->looking];
-    
-    *data = n;
-
-    iterator->looking += 1;
-
-    c     = m->rows [n]->degree;
-    cells = m->rows [n]->cells;
-    
-    for (i = 0; i < c; i++) {
-      o = cells [i]->target->index;
-      
-      if (o == n)
-	o = cells [i]->source->index;
-      
-      if (iterator->closed [o] < 0) 
-	_bfs_candidat_add(iterator, o, iterator->closed [n] + 1);
-    }
-    
-    return EINA_TRUE;
-  }
-
   return EINA_FALSE;
 }
 
@@ -170,32 +144,60 @@ gs_matrix_iterator_bfs_index_next(iterator_t *iterator)
 }
 
 GSAPI int
-gs_matrix_unweighted_eccentricity(const matrix_t *matrix,
+gs_matrix_unweighted_eccentricity(matrix_t *matrix,
 				  int index,
-				  iterator_t *iterator)
+				  int **stack_p,
+				  int **closed_p)
 {
-  matrix_iterator_bfs *bfs;
-  void *data;
-  int d;
+  int  d;
+  int  i, c, o, n;
+  int  looking, candidat;
+  int *stack, *closed;
+  int *cells, *neigh;
+  int *degrees;
 
-  if (iterator == NULL) {
-    bfs = _gs_matrix_iterator_bfs_create(matrix);
-    _bfs_candidat_add(iterator, index, 0);
-  }
-  else {
-    bfs = (matrix_iterator_bfs*) iterator;
-    gs_matrix_iterator_bfs_reset_from_index(bfs, index);
-  }
+  cells   = matrix->cells;
+  degrees = matrix->degrees;
+
+  if (*stack_p == NULL)
+    *stack_p = (int*) malloc(matrix->nodes * sizeof(int));
+
+  if (*closed_p == NULL)
+    *closed_p = (int*) malloc(matrix->nodes * sizeof(int));
+ 
+  stack  = *stack_p;
+  closed = *closed_p;
   
-  while (_bfs_next(bfs, &data) == EINA_TRUE)
-    ;
+  looking = matrix->nodes;
 
-  d = bfs->depth_max;
+  for (i = 0; i < looking; i++)
+    closed [i] = -1;
 
-  if (iterator == NULL)
-    gs_iterator_free(bfs);
+  closed [index] = 0;
+  stack  [0]     = index;
 
-  return d;
+  looking  = 0;
+  candidat = 1;
+  
+  while (looking < candidat) {
+    n = stack   [looking++];
+    d = closed  [n] + 1;
+    c = degrees [n];
+
+    neigh = cells + n * matrix->davg;
+
+    for (i = 0; i < c; i++) {
+      o      = *neigh;
+      neigh += 1;
+      
+      if (closed [o] < 0) {
+	stack  [candidat++] = o;
+	closed [o]          = d;
+      }
+    }
+  }
+
+  return closed [stack[looking - 1]];
 }
 
 GSAPI int
