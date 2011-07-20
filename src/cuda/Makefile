@@ -13,10 +13,10 @@ CLIBS  += -L$(CUDA_DIR)/lib64 -lcublas
 libgs_cuda: $(KERNELS) $(OBJS)
 	$(CC) -shared -Wl,-soname,libgs_cuda.so.1.0 -o ../../libgs_cuda.so.1.0 $(OBJS) $(KERNELS) $(CLIBS)
 
-$(OBJS): %.o: %.c:
+$(OBJS): %.o: %.c
 	$(CC) -c $(DEFS) $(CFLAGS) -o $@ $<
 
-$(KERNELS): %.o: %.cu:
+$(KERNELS): %.o: %.cu
 	$(NVCC) -c $(DEFS) $(CFLAGS) -o $@ $<
 
 clean:

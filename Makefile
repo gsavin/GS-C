@@ -12,7 +12,7 @@ all: compil $(BIN)
 compil:
 	make -C src all
 
-$(BIN): %.c: %:
+$(BIN): %.c: %
 	$(CC) $(DEFS) $(CFLAGS) $(CLIBS) $< -o $@
 
 clean:
