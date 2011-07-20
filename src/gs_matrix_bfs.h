@@ -30,9 +30,7 @@ gs_matrix_iterator_bfs_index_next(iterator_t *iterator);
 
 GSAPI int
 gs_matrix_unweighted_eccentricity(matrix_t *matrix,
-				  int             index,
-				  int           **stack,
-				  int           **closed);
+				  int       index);
 
 GSAPI int
 gs_matrix_iterator_bfs_depth_max_get(iterator_t *iterator);

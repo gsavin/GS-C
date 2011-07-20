@@ -145,37 +145,33 @@ gs_matrix_iterator_bfs_index_next(iterator_t *iterator)
 
 GSAPI int
 gs_matrix_unweighted_eccentricity(matrix_t *matrix,
-				  int index,
-				  int **stack_p,
-				  int **closed_p)
+				  int index)
 {
-  int  d;
-  int  i, c, o, n;
+  int  d, dmax;
+  int  i, c, o, n, k, nodes;
   int  looking, candidat;
-  int *stack, *closed;
   int *cells, *neigh;
   int *degrees;
+  int stack  [matrix->nodes];
+  int closed [matrix->nodes];
 
   cells   = matrix->cells;
   degrees = matrix->degrees;
-
-  if (*stack_p == NULL)
-    *stack_p = (int*) malloc(matrix->nodes * sizeof(int));
-
-  if (*closed_p == NULL)
-    *closed_p = (int*) malloc(matrix->nodes * sizeof(int));
- 
-  stack  = *stack_p;
-  closed = *closed_p;
+  dmax    = 0;
+  nodes   = matrix->nodes;
   
-  looking = matrix->nodes;
+  k = index;
 
-  for (i = 0; i < looking; i++)
+  if (k < 0)
+    k = 0;
+
+ eccentricity:
+  for (i = 0; i < nodes; i++)
     closed [i] = -1;
-
-  closed [index] = 0;
-  stack  [0]     = index;
-
+  
+  closed [k] = 0;
+  stack  [0] = k;
+  
   looking  = 0;
   candidat = 1;
   
@@ -183,12 +179,11 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
     n = stack   [looking++];
     d = closed  [n] + 1;
     c = degrees [n];
-
+    
     neigh = cells + n * matrix->davg;
-
+    
     for (i = 0; i < c; i++) {
-      o      = *neigh;
-      neigh += 1;
+      o = *(neigh++);
       
       if (closed [o] < 0) {
 	stack  [candidat++] = o;
@@ -196,8 +191,16 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
       }
     }
   }
-
-  return closed [stack[looking - 1]];
+  
+  d = closed [stack[looking - 1]];
+  
+  if (d > dmax)
+    dmax = d;
+  
+  if (index < 0 && ++k < nodes)
+    goto eccentricity;
+  
+  return dmax;
 }
 
 GSAPI int

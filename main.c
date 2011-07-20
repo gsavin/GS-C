@@ -12,6 +12,9 @@ static void print_id_cb(void *n, void **data)
 #define NODE_SIZE 100000
 #define EDGE_SIZE 10000
 
+#define START_TIMER(start) ((start) = clock())
+#define STOP_TIMER(start, elapsed) (elapsed) = ((double)(clock() - (start)) / CLOCKS_PER_SEC)
+
 static void
 create_graph(int r)
 {
@@ -240,16 +243,13 @@ test_matrix_bfs()
   iterator_t *it;
   int idx, d, t;
   source_dgs_t *in;
-  clock_t c1, c2, c3;
-  int *stack, *closed;
-
-  stack = NULL;
-  closed = NULL;
-
-  c1 = clock();
+  clock_t c;
+  double read_time, compute_time;
 
   d = 0;
   m = gs_matrix_new();
+
+  START_TIMER(c);
   
   in = gs_stream_source_file_dgs_open("sample.dgs");
 
@@ -260,6 +260,8 @@ test_matrix_bfs()
     ;
 
   gs_stream_source_file_dgs_close(in);
+
+  STOP_TIMER(c, read_time);
   
   /*
   gs_matrix_node_add(m, "A");
@@ -282,31 +284,17 @@ test_matrix_bfs()
   
   */
   //  gs_matrix_print(m, stdout);
-
-  c2 = clock();
   
   //printf("---- start %d ----\n", 0);
   //it = gs_matrix_iterator_bfs_new_from_index(m, 0);
 
   printf("%d nodes; %d edges\n", m->nodes, m->edges);
 
-  for (idx = 0; idx < m->nodes; idx++) {
+  START_TIMER(c);
+  d = gs_matrix_unweighted_eccentricity(m, -1);
+  STOP_TIMER(c, compute_time);
 
-    t = gs_matrix_unweighted_eccentricity(m, idx, &stack, &closed);
-
-    //printf("[%d] %d\n", idx, t);
-
-    if (t > d)
-      d = t;
-  }
-
-  //gs_iterator_free(it);
-
-  c3 = clock();
-
-  printf("read in %dms\ncomputed in %dms\n",
-	 (c2-c1) / (CLOCKS_PER_SEC / 1000), 
-	 (c3-c2) / (CLOCKS_PER_SEC / 1000));
+  printf("read     in %.2f s\ncomputed in %.2f s\n", read_time, compute_time);
   printf("Max depth : %d\n", d);
 
   gs_matrix_destroy(m);
