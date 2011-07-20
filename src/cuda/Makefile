@@ -2,21 +2,22 @@ include ../../common.mk
 
 NVCC=nvcc -arch sm_20 -Xcompiler -fPIC
 
-DEFS=
-#DEFS+=-DDEBUG
-OBJS=gs_cuda_diameter.o
+OBJS    := $(patsubst %.c,%.o,$(wildcard *.c))
+KERNELS := $(patsubst %.cu,%.o,$(wildcard *_kernel.cu))
 
-EINA_DIR=/home/gsavin/local
-CUDA_DIR=/usr/local/cuda
+CUDA_DIR := /usr/local/cuda
 
 CFLAGS += -I.. -I$(CUDA_DIR)/include
 CLIBS  += -L$(CUDA_DIR)/lib64 -lcublas
 
-libgs_cuda: $(OBJS)
-	$(CC) -shared -Wl,-soname,libgs_cuda.so.1.0 -o ../../libgs_cuda.so.1.0 $(OBJS) $(CLIBS)
+libgs_cuda: $(KERNELS) $(OBJS)
+	$(CC) -shared -Wl,-soname,libgs_cuda.so.1.0 -o ../../libgs_cuda.so.1.0 $(OBJS) $(KERNELS) $(CLIBS)
 
-gs_cuda_diameter.o :
-	$(NVCC) -c $(DEFS) $(CFLAGS) gs_cuda_diameter.cu
+$(OBJS): %.o: %.c:
+	$(CC) -c $(DEFS) $(CFLAGS) -o $@ $<
+
+$(KERNELS): %.o: %.cu:
+	$(NVCC) -c $(DEFS) $(CFLAGS) -o $@ $<
 
 clean:
 	rm -f *.o *.d *~ ../../libgs_cuda.so*
