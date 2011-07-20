@@ -154,7 +154,7 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
   int *degrees;
   int stack  [matrix->nodes];
   int closed [matrix->nodes];
-
+  
   cells   = matrix->cells;
   degrees = matrix->degrees;
   dmax    = 0;
@@ -166,9 +166,10 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
     k = 0;
 
  eccentricity:
+
   for (i = 0; i < nodes; i++)
     closed [i] = -1;
-  
+
   closed [k] = 0;
   stack  [0] = k;
   
@@ -199,7 +200,7 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
   
   if (index < 0 && ++k < nodes)
     goto eccentricity;
-  
+
   return dmax;
 }
 

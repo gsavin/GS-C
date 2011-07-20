@@ -1,17 +1,23 @@
+#include <cublas.h>
+#include "gs_matrix.h"
 
-__global__ void diameter(int    nodes,
+__global__ void diameter(const int    nodes,
 			 int   *degrees,
-			 int   *data,
+			 int   *cells,
+                         int    padding,
 			 float *eccentricities)
 {
   int index;
   index = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (index < n) {
-    int   looking, candidat, i, o, n, c;
-    int   stack  [nodes];
-    float closed [nodes];
-    float d;
+  if (index < nodes) {
+    int    looking, candidat, i, o, n, c;
+    int   *stack, *neigh;
+    float *closed;
+    float  d;
+
+    stack = (int*) malloc(nodes*sizeof(int));
+    closed = (float*) malloc(nodes*sizeof(float));
 
     for (i = 0; i < nodes; i++)
       closed [i] = -1;
@@ -27,7 +33,7 @@ __global__ void diameter(int    nodes,
       d = closed  [n] + 1;
       c = degrees [n];
       
-      neigh = cells + n * matrix->davg;
+      neigh = cells + n * padding;
       
       for (i = 0; i < c; i++) {
 	o = *(neigh++);
@@ -43,7 +49,7 @@ __global__ void diameter(int    nodes,
   }
 }
 
-GSAPI int
+GSAPI __host__ int
 gs_cuda_diameter(const matrix_t *matrix)
 {
   float ecc;
@@ -51,17 +57,17 @@ gs_cuda_diameter(const matrix_t *matrix)
   int *degrees_device, *data_device;
   float *ecc_device;
   dim3 block(16);
-  dim3 grid(n / 16 + 1);
+  dim3 grid(matrix->nodes / 16 + 1);
 
   cudaMalloc((void**) &degrees_device, matrix->nodes * sizeof(int));
   cudaMalloc((void**) &data_device,    matrix->size);
   cudaMalloc((void**) &ecc_device,     matrix->nodes * sizeof(float));
 
-  cudaMemcpy(degrees_dev, matrix->degrees, matrix->nodes * sizeof(int), cudaMemcpyHostToDevice);
-  cudaMemcpy(data_dev,    matrix->data,    matrix->size,                cudaMemcpyHostToDevice);
+  cudaMemcpy(degrees_device, matrix->degrees, matrix->nodes * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(data_device,    matrix->cells,    matrix->size,                cudaMemcpyHostToDevice);
 
-  diameter<<<grid, block>>>(matrix->nodes, degrees_device, data_device, ecc_device);
-  ind = cubasIsamax(matrix->nodes, ecc_device, 1);
+  diameter<<<grid, block>>>(matrix->nodes, degrees_device, data_device, matrix->davg, ecc_device);
+  ind = cublasIsamax(matrix->nodes, ecc_device, 1);
 
   cudaMemcpy(&ecc, ecc_device + ind, sizeof(float), cudaMemcpyDeviceToHost);
 }

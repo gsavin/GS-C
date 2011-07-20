@@ -3,6 +3,7 @@
 #include "gs_graph_bfs.h"
 #include "gs_algorithm_diameter.h"
 #include "gs_matrix.h"
+#include "gs_cuda_diameter.h"
 
 static void print_id_cb(void *n, void **data)
 {
@@ -291,7 +292,7 @@ test_matrix_bfs()
   printf("%d nodes; %d edges\n", m->nodes, m->edges);
 
   START_TIMER(c);
-  d = gs_matrix_unweighted_eccentricity(m, -1);
+  d = gs_cuda_diameter(m);//gs_matrix_unweighted_eccentricity(m, -1);
   STOP_TIMER(c, compute_time);
 
   printf("read     in %.2f s\ncomputed in %.2f s\n", read_time, compute_time);
