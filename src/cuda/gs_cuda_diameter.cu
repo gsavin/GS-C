@@ -47,8 +47,15 @@ gs_cuda_diameter(const GSMatrix *matrix)
 
   diameter<<<grid, block>>>(matrix->nodes, degrees_device, data_device, matrix->davg, ecc_device);
   ind = cublasIsamax(matrix->nodes, ecc_device, 1);
+  status= cublasGetError();
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    fprintf (stderr, "!!!! CUBLAS error\n");
+    exit(EXIT_FAILURE);
+  }
 
   HANDLE_ERROR(cudaMemcpy(ecc_host, ecc_device, matrix->nodes * sizeof(float), cudaMemcpyDeviceToHost));
+
+  
 
   for (ind = 0; ind < matrix->nodes; ind++)
     fprintf(stdout, "[%d] %f\n", ind, ecc_host[ind]);
