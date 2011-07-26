@@ -25,6 +25,14 @@ gs_cuda_diameter(const GSMatrix *matrix)
   float *ecc_device, *ecc_host;
   dim3 block(16);
   dim3 grid(matrix->nodes / 16 + 1);
+  cublasStatus status;
+
+  status = cublasInit();
+  
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    fprintf (stderr, "!!!! CUBLAS initialization error\n");
+    exit(EXIT_FAILURE);
+  }
 
   ecc = 0;
 
@@ -38,7 +46,7 @@ gs_cuda_diameter(const GSMatrix *matrix)
   HANDLE_ERROR(cudaMemcpy(data_device,    matrix->cells,   matrix->size,                cudaMemcpyHostToDevice));
 
   diameter<<<grid, block>>>(matrix->nodes, degrees_device, data_device, matrix->davg, ecc_device);
-  //ind = cublasIsamax(matrix->nodes, ecc_device, 1);
+  ind = cublasIsamax(matrix->nodes, ecc_device, 1);
 
   HANDLE_ERROR(cudaMemcpy(ecc_host, ecc_device, matrix->nodes * sizeof(float), cudaMemcpyDeviceToHost));
 
@@ -49,5 +57,11 @@ gs_cuda_diameter(const GSMatrix *matrix)
   HANDLE_ERROR(cudaFree(data_device));
   HANDLE_ERROR(cudaFree(ecc_device));
 
-  return ecc;
+  status = cublasShutdown();
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    fprintf (stderr, "!!!! shutdown error (A)\n");
+    exit(EXIT_FAILURE);
+  }
+
+  return ecc_host[ind];
 }
