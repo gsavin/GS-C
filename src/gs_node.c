@@ -10,51 +10,55 @@
  * PUBLIC
  */
 
-GSAPI node_t *
-gs_node_create(const graph_t *g,
-	       const element_id_t id)
+GSAPI GSNode*
+gs_node_create(GSGraph   *graph,
+	       const gsid id)
 {
-  node_t *node;
-  node = (node_t*) malloc(sizeof(node_t));
+  GSNode *node;
+  node = (GSNode*) malloc(sizeof(GSNode));
   
   GS_OBJECT(node)->type = NODE_TYPE;
   gs_element_init(GS_ELEMENT(node),id);
-  node->graph = g;
+  node->graph = graph;
   node->edges = NULL;
   node->edge_count = 0;
 
 #ifdef DEBUG
-  EINA_LOG_DBG("\"%s\"", id);
+  g_debug("\"%s\"", id);
 #endif
 
   return node;
 }
 
 GSAPI void
-gs_node_destroy(node_t *node)
+gs_node_destroy(GSNode *node)
 {
 #ifdef DEBUG
-  EINA_LOG_DBG("\"%s\"", gs_element_id_get(GS_ELEMENT(node)));
+  g_debug("\"%s\"", gs_element_id_get(GS_ELEMENT(node)));
 #endif
 
   gs_element_finalize(GS_ELEMENT(node));
-  eina_list_free(node->edges);
+  g_list_free(node->edges);
   free(node);
 }
 
 GSAPI void
-gs_node_edge_register(node_t *node,
-		      const edge_t *edge)
+gs_node_edge_register(GSNode *node,
+		      GSEdge *edge)
 {
   if (edge->source == node ||
       edge->target == node) {
-    if (eina_list_data_find(node->edges, edge) == NULL)
-      node->edges = eina_list_append(node->edges, edge);
+    if (g_list_find(node->edges, edge) == NULL)
+      node->edges = g_list_append(node->edges, edge);
   }
 }
 
-GSAPI inline iterator_t*
-gs_node_edge_iterator_new(const node_t *node)
+GSAPI inline GSIterator*
+gs_node_edge_iterator_new(const GSNode *node)
 {
-  return eina_list_iterator_new(node->edges);
+  GSIterator *it;
+  it = (GSIterator*) malloc(sizeof(GSIterator));
+  it->list = node->edges;
+
+  return it;
 }

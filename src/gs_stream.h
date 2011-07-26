@@ -4,10 +4,14 @@
 #include "gs_types.h"
 #include "gs_common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _source {
-  element_id_t id;
+  gsid         id;
   unsigned int sink_count;
-  Eina_List *sinks;
+  GList       *sinks;
 };
 
 typedef enum {
@@ -27,55 +31,59 @@ typedef enum {
 } event_t;
 
 
-typedef void (*sink_cb_t)(const sink_t *sink, const event_t e, size_t size, const void **data);
+typedef void (*GSSinkCB)(const GSSink *sink, const event_t e, size_t size, const void **data);
 
-#define GS_SINK_CALLBACK(function) ((sink_cb_t)function)
+#define GS_SINK_CALLBACK(function) ((GSSinkCB)function)
 
 struct _sink {
   void *container;
-  sink_cb_t callback;
+  GSSinkCB callback;
 };
 
-#define GS_SOURCE_FIELD source_t __source
-#define GS_SOURCE(e) ((source_t*) &(e->__source))
+#define GS_SOURCE_FIELD GSSource __source
+#define GS_SOURCE(e) ((GSSource*) &(e->__source))
 
-#define GS_SINK_FIELD sink_t __sink
-#define GS_SINK(e) ((sink_t*) &(e->__sink))
+#define GS_SINK_FIELD GSSink __sink
+#define GS_SINK(e) ((GSSink*) &(e->__sink))
 
-GSAPI void gs_stream_source_init(source_t *source,
-				 element_id_t id);
+GSAPI void gs_stream_source_init(GSSource *source,
+				 gsid      id);
 
-GSAPI void gs_stream_source_finalize(source_t *source);
+GSAPI void gs_stream_source_finalize(GSSource *source);
 
-GSAPI void gs_stream_source_sink_add(source_t *source,
-				     const sink_t *sink);
+GSAPI void gs_stream_source_sink_add(GSSource     *source,
+				     const GSSink *sink);
 
-GSAPI void gs_stream_source_sink_delete(source_t *source,
-					const sink_t *sink);
+GSAPI void gs_stream_source_sink_delete(GSSource     *source,
+					const GSSink *sink);
 
-GSAPI void gs_stream_source_trigger_node_added(source_t *source,
-					       element_id_t graph_id,
-					       element_id_t node_id);
+GSAPI void gs_stream_source_trigger_node_added(GSSource *source,
+					       gsid      graph_id,
+					       gsid      node_id);
 
-GSAPI void gs_stream_source_trigger_node_deleted(source_t *source,
-						 element_id_t graph_id,
-						 element_id_t node_id);
+GSAPI void gs_stream_source_trigger_node_deleted(GSSource *source,
+						 gsid      graph_id,
+						 gsid      node_id);
 
-GSAPI void gs_stream_source_trigger_edge_added(source_t *source,
-					       element_id_t graph_id,
-					       element_id_t edge_id,
-					       element_id_t edge_source_id,
-					       element_id_t edge_target_id,
-					       bool_t directed);
+GSAPI void gs_stream_source_trigger_edge_added(GSSource *source,
+					       gsid      graph_id,
+					       gsid      edge_id,
+					       gsid      edge_source_id,
+					       gsid      edge_target_id,
+					       gsboolean directed);
 
-GSAPI void gs_stream_source_trigger_edge_deleted(source_t *source,
-						 element_id_t graph_id,
-						 element_id_t edge_id);
+GSAPI void gs_stream_source_trigger_edge_deleted(GSSource *source,
+						 gsid      graph_id,
+						 gsid      edge_id);
 
-GSAPI void gs_stream_sink_init(sink_t *sink,
-			       void *container,
-			       sink_cb_t callback);
+GSAPI void gs_stream_sink_init(GSSink  *sink,
+			       void    *container,
+			       GSSinkCB callback);
 
-GSAPI void gs_stream_sink_finalize(sink_t *sink);
+GSAPI void gs_stream_sink_finalize(GSSink *sink);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_STREAM_H_ */

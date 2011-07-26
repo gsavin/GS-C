@@ -1,4 +1,3 @@
-#include "gs_cuda_diameter.h"
 
 __global__ void diameter(const int    nodes,
 			 int   *degrees,

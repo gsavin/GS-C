@@ -1,19 +1,15 @@
 #include "gs_element.h"
 
-#ifndef ELEMENT_HASH_FUNCTION
-#define ELEMENT_HASH_FUNCTION eina_hash_string_small_new
-#endif
-
 /**********************************************************************
  * PRIVATE
  */
 
 typedef struct {
   union {
-    int int_value;
-    real_t real_value;
-    char *string_value;
-    void *default_value;
+    int    int_value;
+    gsreal real_value;
+    char  *string_value;
+    void  *default_value;
   };
 } attribute_value;
 
@@ -31,21 +27,23 @@ _gs_element_value_free(void *data)
   free(data);
 }
 
-GSAPI static inline attribute_value *
-_gs_element_attribute_get(const element_t *e, const gs_key_t key)
+GSAPI static inline attribute_value*
+_gs_element_attribute_get(const GSElement *element,
+			  const gskey      key)
 {
   attribute_value *value;
-  value = (attribute_value*) eina_hash_find(e->attributes, key);
+  value = (attribute_value*) g_hash_table_lookup(e->attributes, key);
 
   if(value == NULL)
     ERROR(GS_ERROR_UNKNOWN_ATTRIBUTE);
 }
 
 GSAPI static inline void
-_gs_element_attribute_add(const element_t *e, const gs_key_t key, attribute_value *value)
+_gs_element_attribute_add(const GSElement *element,
+			  const gskey      key,
+			  attribute_value *value)
 {
-  if(eina_hash_add(e->attributes, key, value) != EINA_TRUE)
-    ERROR(GS_ERROR_UNKNOWN);
+  g_hash_table_insert(e->attributes, key, value);
 }
 
 /**********************************************************************
@@ -53,71 +51,83 @@ _gs_element_attribute_add(const element_t *e, const gs_key_t key, attribute_valu
  */
 
 GSAPI void
-gs_element_init(element_t *e, element_id_t id)
+gs_element_init(GSElement *element,
+		gsid       id)
 {
-  e->id = id;
-  e->attributes = ELEMENT_HASH_FUNCTION(_gs_element_value_free);
+  element->id = id;
+  element->attributes = g_hash_table_new_full(g_str_hash, g_str_equal,
+					      NULL, _gs_element_value_free);
 }
 
 GSAPI void
-gs_element_finalize(element_t *e)
+gs_element_finalize(GSElement *element)
 {
-  eina_hash_free(e->attributes);
+  g_hash_table_destroy(element->attributes);
 }
 
-GSAPI element_id_t
-gs_element_id_get(const element_t *element)
+GSAPI gsid
+gs_element_id_get(const GSElement *element)
 {
   return element->id;
 }
 
 GSAPI void
-gs_element_attribute_add(const element_t *e, const gs_key_t key, void *value)
+gs_element_attribute_add(const GSElement *element,
+			 const gskey      key,
+			 void            *value)
 {
   attribute_value *av;
   av = _gs_element_attribute_new_value();
   av->default_value = value;
 
-  _gs_element_attribute_add(e, key, av);
+  _gs_element_attribute_add(element, key, av);
 }
 
 GSAPI void
-gs_element_attribute_add_int(const element_t *e, const gs_key_t key, int value)
+gs_element_attribute_add_int(const GSElement *element,
+			     const gskey      key,
+			     int              value)
 {
   attribute_value *av;
   av = _gs_element_attribute_new_value();
   av->int_value = value;
 
-  _gs_element_attribute_add(e, key, av);
+  _gs_element_attribute_add(element, key, av);
 }
 
 GSAPI void
-gs_element_attribute_add_real(const element_t *e, const gs_key_t key, real_t value)
+gs_element_attribute_add_real(const GSElement *element,
+			      const gskey      key,
+			      gsreal           value)
 {
   attribute_value *av;
   av = _gs_element_attribute_new_value();
   av->real_value = value;
 
-  _gs_element_attribute_add(e, key, av);
+  _gs_element_attribute_add(element, key, av);
 }
 
 GSAPI void
-gs_element_attribute_add_string(const element_t *e, const gs_key_t key, char *value)
+gs_element_attribute_add_string(const GSElement *element,
+				const gskey      key,
+				char            *value)
 {
   attribute_value *av;
   av = _gs_element_attribute_new_value();
   av->string_value = value;
 
-  _gs_element_attribute_add(e, key, av);
+  _gs_element_attribute_add(element, key, av);
 }
 
 GSAPI void *
-gs_element_attribute_change(const element_t *e, const gs_key_t key, void *value)
+gs_element_attribute_change(const GSElement *element,
+			    const gskey      key,
+			    void            *value)
 {
   attribute_value *av;
   void *old;
 
-  av = _gs_element_attribute_get(e, key);
+  av = _gs_element_attribute_get(element, key);
   old = av->default_value;
   av->default_value = value;
 
@@ -125,12 +135,14 @@ gs_element_attribute_change(const element_t *e, const gs_key_t key, void *value)
 }
 
 GSAPI int
-gs_element_attribute_change_int(const element_t *e, const gs_key_t key, int value)
+gs_element_attribute_change_int(const GSElement *element,
+				const gskey      key,
+				int              value)
 {
   attribute_value *av;
   int old;
 
-  av = _gs_element_attribute_get(e, key);
+  av = _gs_element_attribute_get(element, key);
   old = av->int_value;
   av->int_value = value;
 
@@ -138,12 +150,14 @@ gs_element_attribute_change_int(const element_t *e, const gs_key_t key, int valu
 }
 
 GSAPI real_t
-gs_element_attribute_change_real(const element_t *e, const gs_key_t key, real_t value)
+gs_element_attribute_change_real(const GSElement *element,
+				 const gskey      key,
+				 gsreal           value)
 {
   attribute_value *av;
-  real_t old;
+  gsreal old;
 
-  av = _gs_element_attribute_get(e, key);
+  av = _gs_element_attribute_get(element, key);
   old = av->real_value;
   av->real_value = value;
 
@@ -151,12 +165,14 @@ gs_element_attribute_change_real(const element_t *e, const gs_key_t key, real_t 
 }
 
 GSAPI char *
-gs_element_attribute_change_string(const element_t *e, const gs_key_t key, char *value)
+gs_element_attribute_change_string(const GSElement *element,
+				   const gskey      key,
+				   char            *value)
 {
   attribute_value *av;
   char *old;
 
-  av = _gs_element_attribute_get(e, key);
+  av = _gs_element_attribute_get(element, key);
   old = av->string_value;
   av->string_value = value;
 
@@ -164,65 +180,70 @@ gs_element_attribute_change_string(const element_t *e, const gs_key_t key, char 
 }
 
 GSAPI void
-gs_element_attribute_delete(const element_t *e,const gs_key_t key)
+gs_element_attribute_delete(const GSElement *element,
+			    const gskey      key)
 {
-  if(eina_hash_del(e->attributes, key, NULL)!=EINA_TRUE) {
+  if(g_hash_table_remove(element->attributes, key)!=GS_TRUE) {
     fprintf(stderr, "error while deleting attribute\n");
   }
 }
 
 GSAPI void *
-gs_element_attribute_get(const element_t *e, const gs_key_t key)
+gs_element_attribute_get(const GSElement *element,
+			 const gskey      key)
 {
   attribute_value *value;
-  value = _gs_element_attribute_get(e, key);
+  value = _gs_element_attribute_get(element, key);
 
   return value->default_value;
 }
 
 GSAPI int
-gs_element_attribute_get_int(const element_t *e, const gs_key_t key)
+gs_element_attribute_get_int(const GSElement *element,
+			     const gskey      key)
 {
   attribute_value *value;
-  value = _gs_element_attribute_get(e, key);
+  value = _gs_element_attribute_get(element, key);
 
   return value->int_value;
 }
 
-GSAPI real_t
-gs_element_attribute_get_real(const element_t *e, const gs_key_t key)
+GSAPI gsreal
+gs_element_attribute_get_real(const GSElement *element,
+			      const gskey      key)
 {
   attribute_value *value;
-  value = _gs_element_attribute_get(e, key);
+  value = _gs_element_attribute_get(element, key);
 
   return value->real_value;
 }
 
 GSAPI char *
-gs_element_attribute_get_string(const element_t *e, const gs_key_t key)
+gs_element_attribute_get_string(const GSElement *element,
+				const gskey      key)
 {
   attribute_value *value;
-  value = _gs_element_attribute_get(e, key);
+  value = _gs_element_attribute_get(element, key);
 
   return value->string_value;
 }
 
-GSAPI iterator_t *
-gs_element_attribute_key_iterator_new(const element_t *e)
+GSAPI GSIterator *
+gs_element_attribute_key_iterator_new(const GSElement *e)
 {
 
 }
 
-GSAPI gs_key_t *
-gs_element_attribute_key_iterator_next(const iterator_t *it)
+GSAPI gskey *
+gs_element_attribute_key_iterator_next(const GSIterator *it)
 {
 
 }
 
 GSAPI void
-gs_element_attribute_key_foreach(const element_t *e,
-				 key_cb_t callback,
-				 void **data)
+gs_element_attribute_key_foreach(const GSElement *element,
+				 GSKeyCB          callback,
+				 void           **data)
 {
 
 }

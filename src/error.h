@@ -16,13 +16,13 @@
 
 #define ERROR(e)					\
   do {							\
-    EINA_LOG_ERR("#%d", e);				\
+    g_error("#%d", e);				\
     exit(e);						\
   } while(0)
 
 #define ERROR_ERRNO(e)				\
   do {						\
-    EINA_LOG_ERR("%s", strerror(errno));	\
+    g_error("%s", strerror(errno));	\
     exit(e);					\
   } while(0)
 

@@ -5,6 +5,10 @@
 #include "gs_common.h"
 #include "gs_stream.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef GS_MATRIX_WEIGHTED
 # define GS_MATRIX_FLAG unsigned char
 #else
@@ -71,5 +75,9 @@ GSAPI element_id_t gs_matrix_node_id_get(const matrix_t *matrix,
 
 GSAPI void gs_matrix_print(const matrix_t *matrix,
 			   FILE *out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_MATRIX_H_ */

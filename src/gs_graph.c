@@ -1,10 +1,6 @@
 #include "gs_graph.h"
 #include "gs_id.h"
 
-#ifndef GRAPH_ELEMENT_HASH_FUNCTION
-#define GRAPH_ELEMENT_HASH_FUNCTION eina_hash_string_djb2_new
-#endif
-
 /**********************************************************************
  * PRIVATE
  */
@@ -12,7 +8,7 @@
 GSAPI static void
 _gs_graph_node_destroy(void *data)
 {
-  element_id_t id;
+  gsid id;
 
   id = gs_element_id_get(GS_ELEMENT(data));
   gs_node_destroy(GS_NODE(data));
@@ -22,7 +18,7 @@ _gs_graph_node_destroy(void *data)
 GSAPI static void
 _gs_graph_edge_destroy(void *data)
 {
-  element_id_t id;
+  gsid id;
 
   id = gs_element_id_get(GS_ELEMENT(data));
   gs_edge_destroy(GS_EDGE(data));
@@ -30,31 +26,31 @@ _gs_graph_edge_destroy(void *data)
 }
 
 GSAPI static void
-_gs_graph_sink_callback(const sink_t *sink,
-			event_t event,
-			size_t size,
-			const void **data)
+_gs_graph_sink_callback(const GSSink *sink,
+			event_t       event,
+			size_t        size,
+			const void  **data)
 {
-  graph_t *g;
-  g = (graph_t*) sink->container;
+  GSGraph *g;
+  g = (GSGraph*) sink->container;
 
   switch(event) {
   case NODE_ADDED:
-    gs_graph_node_add(g, (element_id_t) data[1]);
+    gs_graph_node_add(g, (gsid) data[1]);
     break;
   case NODE_DELETED:
-    gs_graph_node_delete(g, (element_id_t) data[1]);
+    gs_graph_node_delete(g, (gsid) data[1]);
     break;
   case EDGE_ADDED:
     gs_graph_edge_add(g,
-		      (element_id_t) data[1],
-		      (element_id_t) data[2],
-		      (element_id_t) data[3],
-		      (bool_t) data[4]);
+		      (gsid)      data[1],
+		      (gsid)      data[2],
+		      (gsid)      data[3],
+		      (gsboolean) data[4]);
     break;
   case EDGE_DELETED:
     gs_graph_edge_delete(g,
-			 (element_id_t) data[1]);
+			 (gsid) data[1]);
     break;
   default:
     break;
@@ -65,11 +61,11 @@ _gs_graph_sink_callback(const sink_t *sink,
  * PUBLIC
  */
 
-GSAPI graph_t*
-gs_graph_create(const element_id_t id)
+GSAPI GSGraph*
+gs_graph_create(const gsid id)
 {
-  graph_t *graph;
-  graph = (graph_t*) malloc(sizeof(graph_t));
+  GSGraph *graph;
+  graph = (GSGraph*) malloc(sizeof(GSGraph));
   
   GS_OBJECT(graph)->type = GRAPH_TYPE;
 
@@ -83,31 +79,31 @@ gs_graph_create(const element_id_t id)
 		      graph,
 		      GS_SINK_CALLBACK(_gs_graph_sink_callback));
 
-  graph->nodes = GRAPH_ELEMENT_HASH_FUNCTION(_gs_graph_node_destroy);
-  graph->edges = GRAPH_ELEMENT_HASH_FUNCTION(_gs_graph_edge_destroy);
+  graph->nodes = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, _gs_graph_node_destroy);
+  graph->edges = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, _gs_graph_edge_destroy);
 
   return graph;
 }
 
 GSAPI void
-gs_graph_destroy(graph_t *graph)
+gs_graph_destroy(GSGraph *graph)
 {
   gs_element_finalize(GS_ELEMENT(graph));
   gs_stream_source_finalize(GS_SOURCE(graph));
   gs_stream_sink_finalize(GS_SINK(graph));
 
-  eina_hash_free(graph->edges);
-  eina_hash_free(graph->nodes);
+  g_hash_table_destroy(graph->edges);
+  g_hash_table_destroy(graph->nodes);
 
   free(graph);
 }
 
-GSAPI node_t*
-gs_graph_node_add(const graph_t *graph,
-		  const element_id_t id)
+GSAPI GSNode*
+gs_graph_node_add(GSGraph   *graph,
+		  const gsid id)
 {
-  node_t *node;
-  node = eina_hash_find(graph->nodes, id);
+  GSNode *node;
+  node = g_hash_table_lookup(graph->nodes, id);
 
   if(node != NULL) {
 #ifdef GRAPH_STRICT_CHECKING
@@ -115,10 +111,10 @@ gs_graph_node_add(const graph_t *graph,
 #endif
   }
   else {
-    element_id_t nid;
+    gsid nid;
     nid = gs_id_copy(id);
     node = gs_node_create(graph, nid);
-    eina_hash_add(graph->nodes, nid, node);
+    g_hash_table_insert(graph->nodes, nid, node);
   }
 
   gs_stream_source_trigger_node_added(GS_SOURCE(graph),
@@ -128,36 +124,36 @@ gs_graph_node_add(const graph_t *graph,
   return node;
 }
 
-GSAPI node_t*
-gs_graph_node_get(const graph_t *graph,
-		  const element_id_t id)
+GSAPI GSNode*
+gs_graph_node_get(const GSGraph *graph,
+		  const gsid     id)
 {
-  node_t *node;
-  node = eina_hash_find(graph->nodes, id);
+  GSNode *node;
+  node = g_hash_table_lookup(graph->nodes, id);
 
   return node;
 }
 
 GSAPI void
-gs_graph_node_delete(const graph_t *graph,
-		     const element_id_t id)
+gs_graph_node_delete(const GSGraph *graph,
+		     const gsid     id)
 {
   gs_stream_source_trigger_node_deleted(GS_SOURCE(graph),
 				      gs_element_id_get(GS_ELEMENT(graph)),
 				      id);
 
-  eina_hash_del_by_key(graph->nodes, id);
+  g_hash_table_remove(graph->nodes, id);
 }
 
-GSAPI edge_t*
-gs_graph_edge_add(const graph_t *graph,
-		  const element_id_t id,
-		  const element_id_t id_src,
-		  const element_id_t id_trg,
-		  bool_t directed)
+GSAPI GSEdge*
+gs_graph_edge_add(GSGraph   *graph,
+		  const gsid id,
+		  const gsid id_src,
+		  const gsid id_trg,
+		  gsboolean  directed)
 {
-  edge_t *edge;
-  edge = eina_hash_find(graph->edges, id);
+  GSEdge *edge;
+  edge = g_hash_table_lookup(graph->edges, id);
 
   if(edge != NULL) {
 #ifdef GRAPH_STRICT_CHECKING
@@ -165,8 +161,8 @@ gs_graph_edge_add(const graph_t *graph,
 #endif
   }
   else {
-    node_t *src, *trg;
-    element_id_t eid;
+    GSNode *src, *trg;
+    gsid eid;
 
     src = gs_graph_node_get(graph, id_src);
     trg = gs_graph_node_get(graph, id_trg);
@@ -185,7 +181,7 @@ gs_graph_edge_add(const graph_t *graph,
 
     eid = gs_id_copy(id);
     edge = gs_edge_create(graph, eid, src, trg, directed);
-    eina_hash_add(graph->edges, eid, edge);
+    g_hash_table_insert(graph->edges, eid, edge);
 
     gs_node_edge_register(src, edge);
     gs_node_edge_register(trg, edge);
@@ -201,76 +197,58 @@ gs_graph_edge_add(const graph_t *graph,
   return edge;
 }
 
-GSAPI edge_t*
-gs_graph_edge_get(const graph_t *graph,
-		  const element_id_t id)
+GSAPI GSEdge*
+gs_graph_edge_get(const GSGraph *graph,
+		  const gsid id)
 {
-  edge_t *edge;
-  edge = eina_hash_find(graph->edges, id);
+  GSEdge *edge;
+  edge = g_hash_table_lookup(graph->edges, id);
   
   return edge;
 }
 
 GSAPI void
-gs_graph_edge_delete(const graph_t *graph,
-		     const element_id_t id)
+gs_graph_edge_delete(const GSGraph *graph,
+		     const gsid id)
 {
 
   gs_stream_source_trigger_edge_deleted(GS_SOURCE(graph),
 					gs_element_id_get(GS_ELEMENT(graph)),
 					id);
 
-  eina_hash_del_by_key(graph->edges, id);
+  g_hash_table_remove(graph->edges, id);
 }
 
-GSAPI iterator_t *
-gs_graph_node_iterator_new(const graph_t *graph)
+GSAPI GSIterator*
+gs_graph_node_iterator_new(const GSGraph *graph)
 {
-  iterator_t *it;
-  it = (iterator_t*) eina_hash_iterator_data_new(graph->nodes);
+  GList *nodes;
+  nodes = g_hash_table_get_values(graph->nodes);
 
-  if(it == NULL) {
-    ERROR(GS_ERROR_UNKNOWN);
-  }
-
-  return it;
+  return gs_iterator_list_new(nodes);
 }
 
-GSAPI void
-gs_graph_node_foreach(const graph_t *graph,
-		      const node_cb_t callback,
-		      void **data)
+GSAPI inline void
+gs_graph_node_foreach(const GSGraph  *graph,
+		      const GSNodeCB  callback,
+		      void           *data)
 {
-  iterator_t *it;
-  node_t *node;
-
-  it = gs_graph_node_iterator_new(graph);
-  EINA_ITERATOR_FOREACH(it, node) callback(node, data);
-  gs_iterator_free(it);
+  g_hash_table_foreach(graph->nodes, (GHFunc) callback, data);
 }
 
-GSAPI iterator_t *
-gs_graph_edge_iterator_new(const graph_t *graph)
+GSAPI GSIterator *
+gs_graph_edge_iterator_new(const GSGraph *graph)
 {
-  iterator_t *it;
-  it = (iterator_t*) eina_hash_iterator_data_new(graph->edges);
+  GList *edges;
+  edges = g_hash_table_get_values(graph->edges);
 
-  if(it == NULL) {
-    ERROR(GS_ERROR_UNKNOWN);
-  }
-
-  return it;
+  return gs_iterator_list_new(edges);
 }
 
-GSAPI void
-gs_graph_edge_foreach(const graph_t *graph,
-		      const edge_cb_t callback,
-		      void **data)
+GSAPI inline void
+gs_graph_edge_foreach(const GSGraph *graph,
+		      const GSEdgeCB callback,
+		      void          *data)
 {
-  iterator_t *it;
-  edge_t *edge;
-
-  it = gs_graph_edge_iterator_new(graph);
-  EINA_ITERATOR_FOREACH(it, edge) callback(edge, data);
-  gs_iterator_free(it);
+  g_hash_table_foreach(graph->edges, (GHFunc) callback, data);
 }

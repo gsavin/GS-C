@@ -6,23 +6,31 @@
 #include "gs_element.h"
 #include "gs_edge.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _node {
-  element_t parent;
-  graph_t *graph;
-  uint edge_count;
-  Eina_List *edges;
+  GSElement parent;
+  GSGraph  *graph;
+  uint      edge_count;
+  GList    *edges;
 };
 
-#define GS_NODE(e) ((node_t*)CHECK_TYPE(e,NODE_TYPE))
+#define GS_NODE(e) ((GSNode*)CHECK_TYPE(e,NODE_TYPE))
 
-GSAPI node_t* gs_node_create(const graph_t*,
-			     const element_id_t);
+GSAPI GSNode* gs_node_create(GSGraph   *graph,
+			     const gsid id);
 
-GSAPI void gs_node_destroy(node_t*);
+GSAPI void gs_node_destroy(GSNode *node);
 
-GSAPI void gs_node_edge_register(node_t *node,
-				 const edge_t * edge);
+GSAPI void gs_node_edge_register(GSNode *node,
+				 GSEdge *edge);
 
-GSAPI iterator_t* gs_node_edge_iterator_new(const node_t *node);
+GSAPI GSIterator* gs_node_edge_iterator_new(const GSNode *node);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_NODE_H_ */

@@ -1,14 +1,14 @@
 #include "gs_edge.h"
 
-GSAPI edge_t *
-gs_edge_create(const graph_t *g,
-	       const element_id_t id,
-	       const node_t *src,
-	       const node_t *trg,
-	       bool_t directed)
+GSAPI GSEdge *
+gs_edge_create(GSGraph    *g,
+	       const gsid  id,
+	       GSNode     *src,
+	       GSNode     *trg,
+	       gsboolean   directed)
 {
-  edge_t *edge;
-  edge = (edge_t*) malloc(sizeof(edge_t));
+  GSEdge *edge;
+  edge = (GSEdge*) malloc(sizeof(GSEdge));
   
   GS_OBJECT(edge)->type = EDGE_TYPE;
   gs_element_init(GS_ELEMENT(edge),id);
@@ -19,17 +19,17 @@ gs_edge_create(const graph_t *g,
   edge->directed = directed;
 
 #ifdef DEBUG
-  EINA_LOG_DBG("\"%s\"", id);
+  g_debug("\"%s\"", id);
 #endif
 
   return edge;
 }
 
 GSAPI void
-gs_edge_destroy(edge_t *edge)
+gs_edge_destroy(GSEdge *edge)
 {
 #ifdef DEBUG
-  EINA_LOG_DBG("\"%s\"", gs_element_id_get(GS_ELEMENT(edge)));
+  g_debug("\"%s\"", gs_element_id_get(GS_ELEMENT(edge)));
 #endif
 
   gs_element_finalize(GS_ELEMENT(edge));

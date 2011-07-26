@@ -4,73 +4,82 @@
 #include "gs_types.h"
 #include "gs_common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _element {
-  object_t parent;
-  element_id_t id;
-  Eina_Hash *attributes;
+  GSObject    parent;
+  gsid        id;
+  GHashTable *attributes;
 };
 
-#define GS_ELEMENT(e) ((element_t*)CHECK_TYPE(e,ELEMENT_TYPE))
+#define GS_ELEMENT(e) ((GSElement*)CHECK_TYPE(e,ELEMENT_TYPE))
 
-GSAPI void gs_element_init(element_t*,
-			   element_id_t);
+GSAPI void gs_element_init(GSElement *element,
+			   gsid       id);
 
-GSAPI void gs_element_finalize(element_t*);
+GSAPI void gs_element_finalize(GSElement *element);
 
-GSAPI element_id_t gs_element_id_get(const element_t*);
+GSAPI gsid gs_element_id_get(const GSElement *element);
 
-GSAPI void gs_element_attribute_add(const element_t*,
-				    const gs_key_t,
-				    void*);
-GSAPI void gs_element_attribute_add_int(const element_t*,
-					const gs_key_t,
-					int);
+GSAPI void gs_element_attribute_add(const GSElement *element,
+				    const gskey      key,
+				    void            *data);
 
-GSAPI void gs_element_attribute_add_real(const element_t*,
-					 const gs_key_t,
-					 real_t);
+GSAPI void gs_element_attribute_add_int(const GSElement *element,
+					const gskey      key,
+					int              data);
 
-GSAPI void gs_element_attribute_add_string(const element_t*,
-					   const gs_key_t,
+GSAPI void gs_element_attribute_add_real(const GSElement *element,
+					 const gskey      key,
+					 gsreal           data);
+
+GSAPI void gs_element_attribute_add_string(const GSElement *element,
+					   const gskey      key,
 					   char*);
 
-GSAPI void *gs_element_attribute_change(const element_t*,
-					const gs_key_t,
-					void*);
+GSAPI void *gs_element_attribute_change(const GSElement *element,
+					const gskey      key,
+					void            *data);
 
-GSAPI int gs_element_attribute_change_int(const element_t*,
-					  const gs_key_t,
-					  int);
+GSAPI int gs_element_attribute_change_int(const GSElement *element,
+					  const gskey      key,
+					  int              data);
 
-GSAPI real_t gs_element_attribute_change_real(const element_t*,
-					      const gs_key_t,
-					      real_t);
+GSAPI gsreal gs_element_attribute_change_real(const GSElement *element,
+					      const gskey      key,
+					      gsreal           data);
 
-GSAPI char *gs_element_attribute_change_string(const element_t*,
-					       const gs_key_t,
-					       char*);
+GSAPI char *gs_element_attribute_change_string(const GSElement *element,
+					       const gskey      key,
+					       char            *data);
 
-GSAPI void gs_element_attribute_delete(const element_t*,
-				       const gs_key_t);
+GSAPI void gs_element_attribute_delete(const GSElement *element,
+				       const gskey      key);
 
-GSAPI void *gs_element_attribute_get(const element_t*,
-				     const gs_key_t);
+GSAPI void *gs_element_attribute_get(const GSElement *element,
+				     const gskey      key);
 
-GSAPI int gs_element_attribute_get_int(const element_t*,
-				       const gs_key_t);
+GSAPI int gs_element_attribute_get_int(const GSElement *element,
+				       const gskey      key);
 
-GSAPI real_t gs_element_attribute_get_real(const element_t*,
-					   const gs_key_t);
+GSAPI gsreal gs_element_attribute_get_real(const GSElement *element,
+					   const gskey      key);
 
-GSAPI char *gs_element_attribute_get_string(const element_t*,
-					    const gs_key_t);
+GSAPI char *gs_element_attribute_get_string(const GSElement *element,
+					    const gskey      key);
 
-GSAPI iterator_t *gs_element_attribute_key_iterator_new(const element_t *e);
+GSAPI GSIterator *gs_element_attribute_key_iterator_new(const GSElement *element);
 
-GSAPI gs_key_t *gs_element_attribute_key_iterator_next(const iterator_t *it);
+GSAPI gskey *gs_element_attribute_key_iterator_next(const GSIterator *it);
 
-GSAPI void gs_element_attribute_key_foreach(const element_t *e,
-					    key_cb_t callback,
-					    void **data);
+GSAPI void gs_element_attribute_key_foreach(const GSElement *element,
+					    GSKeyCB          callback,
+					    void           **data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_ELEMENT_H_ */

@@ -5,25 +5,33 @@
 #include "gs_common.h"
 #include "gs_element.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _edge {
-  element_t parent;
-  graph_t *graph;
-  node_t *source;
-  node_t *target;
-  bool_t directed;
+  GSElement parent;
+  GSGraph  *graph;
+  GSNode   *source;
+  GSNode   *target;
+  gsboolean directed;
 };
 
-#define GS_EDGE(e) ((edge_t*)CHECK_TYPE(e,EDGE_TYPE))
+#define GS_EDGE(e) ((GSEdge*)CHECK_TYPE(e,EDGE_TYPE))
 
-GSAPI edge_t* gs_edge_create(const graph_t*,
-			     const element_id_t,
-			     const node_t*,
-			     const node_t*,
-			     bool_t);
+GSAPI GSEdge* gs_edge_create(GSGraph    *graph,
+			     const gsid  id,
+			     GSNode     *source,
+			     GSNode     *target,
+			     gsboolean   directed);
 
-GSAPI void gs_edge_destroy(edge_t*);
+GSAPI void gs_edge_destroy(GSEdge *edge);
 
 #define GS_EDGE_OPOSITE_OF(e,n)			\
   (e->source == n ? e->target : e->source)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_EDGE_H_ */

@@ -9,52 +9,60 @@
 #include "gs_edge.h"
 #include "gs_stream.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _graph {
-  element_t parent;
-  Eina_Hash *nodes;
-  Eina_Hash *edges;
+  GSElement   parent;
+  GHashTable *nodes;
+  GHashTable *edges;
+
   GS_SOURCE_FIELD;
   GS_SINK_FIELD;
 };
 
-#define GS_GRAPH(e) ((graph_t*)CHECK_TYPE(e,GRAPH_TYPE))
+#define GS_GRAPH(e) ((GSGraph*)CHECK_TYPE(e,GSGRAPHYPE))
 
-GSAPI graph_t* gs_graph_create(const element_id_t);
+GSAPI GSGraph* gs_graph_create(const gsid);
 
-GSAPI void gs_graph_destroy(graph_t*);
+GSAPI void gs_graph_destroy(GSGraph *graph);
 
-GSAPI node_t *gs_graph_node_add(const graph_t*,
-				const element_id_t);
+GSAPI GSNode *gs_graph_node_add(GSGraph   *graph,
+				const gsid id);
 
-GSAPI node_t *gs_graph_node_get(const graph_t*,
-				const element_id_t);
+GSAPI GSNode *gs_graph_node_get(const GSGraph *graph,
+				const gsid     id);
 
-GSAPI void gs_graph_node_delete(const graph_t*,
-				const element_id_t);
+GSAPI void gs_graph_node_delete(const GSGraph *graph,
+				const gsid     id);
 
-GSAPI edge_t *gs_graph_edge_add(const graph_t*,
-				const element_id_t,
-				const element_id_t,
-				const element_id_t,
-				bool_t);
+GSAPI GSEdge *gs_graph_edge_add(GSGraph   *graph,
+				const gsid id,
+				const gsid source,
+				const gsid target,
+				gsboolean  directed);
 
-GSAPI edge_t *gs_graph_edge_get(const graph_t*,
-				const element_id_t);
+GSAPI GSEdge *gs_graph_edge_get(const GSGraph *graph,
+				const gsid     id);
 
-GSAPI void gs_graph_edge_delete(const graph_t*,
-				const element_id_t);
+GSAPI void gs_graph_edge_delete(const GSGraph *graph,
+				const gsid     id);
 
-GSAPI iterator_t *gs_graph_node_iterator_new(const graph_t*);
+GSAPI GSIterator *gs_graph_node_iterator_new(const GSGraph *graph);
 
-GSAPI void gs_graph_node_foreach(const graph_t *graph,
-				 const node_cb_t callback,
-				 void **data);
+GSAPI void gs_graph_node_foreach(const GSGraph  *graph,
+				 const GSNodeCB  callback,
+				 void           *data);
 
-GSAPI iterator_t *gs_graph_edge_iterator_new(const graph_t*);
+GSAPI GSIterator *gs_graph_edge_iterator_new(const GSGraph *graph);
 
-GSAPI void gs_graph_edge_foreach(const graph_t *graph,
-				 const edge_cb_t callback,
-				 void **data);
+GSAPI void gs_graph_edge_foreach(const GSGraph *graph,
+				 const GSEdgeCB callback,
+				 void          *data);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GRAPHSTREAM_GRAPH_H_ */

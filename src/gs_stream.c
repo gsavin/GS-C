@@ -5,19 +5,16 @@
  */
 
 GSAPI static inline void
-_gs_stream_source_trigger(const source_t *source,
-			  event_t event,
-			  size_t size,
-			  const void **data)
+_gs_stream_source_trigger(const GSSource *source,
+			  event_t         event,
+			  size_t          size,
+			  void          **data)
 {
-  Eina_List *list;
-  Eina_List *l;
-  Eina_List *l_next;
-  sink_t      *sink;
+  GList  *list;
+  GSSink *sink;
 
-  list = source->sinks;
-  
-  EINA_LIST_FOREACH_SAFE(list, l, l_next, sink) {
+  for (list = source->sinks; list; list = list->next) {
+    sink = (GSSink*) list->data;
     sink->callback(sink, event, size, data);
   }
 }
@@ -27,52 +24,40 @@ _gs_stream_source_trigger(const source_t *source,
  */
 
 GSAPI void
-gs_stream_source_init(source_t *source,
-		      element_id_t id)
+gs_stream_source_init(GSSource *source,
+		      gsid      id)
 {
-  EINA_LOG_DBG("%d", source);
   source->id = id;
   source->sink_count = 0;
   source->sinks = NULL;
 }
 
 GSAPI void
-gs_stream_source_finalize(source_t *source)
+gs_stream_source_finalize(GSSource *source)
 {
-  eina_list_free(source->sinks);
+  g_list_free(source->sinks);
 }
 
 GSAPI void
-gs_stream_source_sink_add(source_t *source,
-			  const sink_t *sink)
+gs_stream_source_sink_add(GSSource     *source,
+			  const GSSink *sink)
 {
-  source->sinks = eina_list_append(source->sinks, sink);
-
-  if(eina_error_get())
-    ERROR(GS_ERROR_CAN_NOT_ADD_SINK);
-
-  source->sink_count = eina_list_count(source->sinks);
-
-  EINA_LOG_DBG("%d | %d", source, sink);
-  EINA_LOG_DBG("sink count = %d", source->sink_count);
+  source->sinks = g_list_append(source->sinks, sink);
+  source->sink_count = g_list_length(source->sinks);
 }
 
 GSAPI void
-gs_stream_source_sink_delete(source_t *source,
-			     const sink_t *sink)
+gs_stream_source_sink_delete(GSSource     *source,
+			     const GSSink *sink)
 {
-  source->sinks = eina_list_remove(source->sinks, sink);
-
-  if(eina_error_get())
-    ERROR(GS_ERROR_CAN_NOT_DELETE_SINK);
-
-  source->sink_count = eina_list_count(source->sinks);
+  source->sinks = g_list_remove(source->sinks, sink);
+  source->sink_count = g_list_length(source->sinks);
 }
 
 GSAPI void
-gs_stream_source_trigger_node_added(source_t *source,
-				    element_id_t graph_id,
-				    element_id_t node_id)
+gs_stream_source_trigger_node_added(GSSource *source,
+				    gsid      graph_id,
+				    gsid      node_id)
 {
   void **data;
 
@@ -88,9 +73,9 @@ gs_stream_source_trigger_node_added(source_t *source,
 }
 
 GSAPI void
-gs_stream_source_trigger_node_deleted(source_t *source,
-				      element_id_t graph_id,
-				      element_id_t node_id)
+gs_stream_source_trigger_node_deleted(GSSource *source,
+				      gsid      graph_id,
+				      gsid      node_id)
 {
   void **data;
 
@@ -106,12 +91,12 @@ gs_stream_source_trigger_node_deleted(source_t *source,
 }
 
 GSAPI void
-gs_stream_source_trigger_edge_added(source_t *source,
-				    element_id_t graph_id,
-				    element_id_t edge_id,
-				    element_id_t edge_source_id,
-				    element_id_t edge_target_id,
-				    bool_t directed)
+gs_stream_source_trigger_edge_added(GSSource *source,
+				    gsid      graph_id,
+				    gsid      edge_id,
+				    gsid      edge_source_id,
+				    gsid      edge_target_id,
+				    gsboolean directed)
 {
   void **data;
 
@@ -130,9 +115,9 @@ gs_stream_source_trigger_edge_added(source_t *source,
 }
 
 GSAPI void
-gs_stream_source_trigger_edge_deleted(source_t *source,
-				      element_id_t graph_id,
-				      element_id_t edge_id)
+gs_stream_source_trigger_edge_deleted(GSSource *source,
+				      gsid      graph_id,
+				      gsid      edge_id)
 {
   void **data;
 
@@ -148,17 +133,16 @@ gs_stream_source_trigger_edge_deleted(source_t *source,
 }
 
 GSAPI void
-gs_stream_sink_init(sink_t *sink,
-		    void *container,
-		    sink_cb_t callback)
+gs_stream_sink_init(GSSink  *sink,
+		    void    *container,
+		    GSSinkCB callback)
 {
-  EINA_LOG_DBG("%d", sink);
   sink->container = container;
   sink->callback  = callback;
 }
 
 GSAPI void
-gs_stream_sink_finalize(sink_t *sink)
+gs_stream_sink_finalize(GSSink *sink)
 {
   
 }
