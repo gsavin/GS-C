@@ -19,7 +19,7 @@ static void print_id_cb(void *n, void **data)
 static void
 create_graph(int r)
 {
-  graph_t *g;
+  GSGraph *g;
   int i;
   char **node_ids, **edge_ids;
 
@@ -67,35 +67,15 @@ create_graph(int r)
 }
 
 void
-benchmark()
-{
-  Eina_Benchmark *test;
-  Eina_Array     *ea;
-
-   test = eina_benchmark_new("test", "creation");
-
-   if (!test)
-     return;
-
-   eina_benchmark_register(test, "work-1", EINA_BENCHMARK(create_graph), 1, 100, 1);
-
-   ea = eina_benchmark_run(test);
-
-   eina_benchmark_free(test);
-}
-
-void
 test_dgs()
 {
-  graph_t *g;
-  source_dgs_t *in;
-  sink_dgs_t *out;
+  GSGraph     *g;
+  GSSourceDGS *in;
+  GSSinkDGS   *out;
   
   g = gs_graph_create("g");
   in = gs_stream_source_file_dgs_open("sample.dgs");
   out = gs_stream_sink_file_dgs_open("sample.out.dgs");
-
-  EINA_LOG_DBG("opened");
 
   gs_stream_source_sink_add(GS_SOURCE(in),
 			    GS_SINK(g));
@@ -114,11 +94,11 @@ test_dgs()
 void
 test_bfs()
 {
-  graph_t *g;
-  iterator_t *it1, *it2;
-  node_t *n;
+  GSGraph *g;
+  GSIterator *it1, *it2;
+  GSNode *n;
   int d, t;
-  source_dgs_t *in;
+  GSSourceDGS *in;
   clock_t t1, t2;
 
   t1 = clock();
@@ -194,9 +174,9 @@ test_bfs()
 void 
 test_diameter()
 {
-  graph_t *g;
+  GSGraph *g;
   int d;
-  source_dgs_t *in;
+  GSSourceDGS *in;
   
   g = gs_graph_create("g");
   in = gs_stream_source_file_dgs_open("test.dgs");
@@ -218,8 +198,8 @@ test_diameter()
 void
 test_matrix()
 {
-  matrix_t *m;
-  source_dgs_t *in;
+  GSMatrix    *m;
+  GSSourceDGS *in;
   
   m = gs_matrix_new();
   in = gs_stream_source_file_dgs_open("sample.dgs");
@@ -240,12 +220,12 @@ test_matrix()
 void
 test_matrix_bfs()
 {
-  matrix_t *m;
-  iterator_t *it;
-  int idx, d, t;
-  source_dgs_t *in;
-  clock_t c;
-  double read_time, compute_time;
+  GSMatrix    *m;
+  GSIterator  *it;
+  int          idx, d, t;
+  GSSourceDGS *in;
+  clock_t      c;
+  double       read_time, compute_time;
 
   d = 0;
   m = gs_matrix_new();
