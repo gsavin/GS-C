@@ -44,7 +44,7 @@ _bfs_set_depth(GSIteratorBFS *iterator,
   d    = (int*) malloc(sizeof(int));
   d[0] = depth;
 
-  g_hash_table_insert(iterator->closed, &node, d);
+  g_hash_table_insert(iterator->closed, node, d);
 }
 
 GSAPI static inline void
@@ -63,7 +63,7 @@ _bfs_add_neighbors(GSIteratorBFS *iterator,
   while (edge != NULL) {
     op = GS_EDGE_OPOSITE_OF(edge, node);
 
-    if (g_hash_table_lookup(iterator->closed, &op) == NULL) {
+    if (g_hash_table_lookup(iterator->closed, op) == NULL) {
       iterator->candidats = g_list_append(iterator->candidats, op);
       
       if (depth < 0)
@@ -104,7 +104,7 @@ _bfs_next(GSIteratorBFS *iterator,
     while (edge != NULL) {
       op = GS_EDGE_OPOSITE_OF(edge, next);
       
-      if (g_hash_table_lookup(iterator->closed, &op) == NULL) {
+      if (g_hash_table_lookup(iterator->closed, op) == NULL) {
 	iterator->candidats = g_list_append(iterator->candidats, op);
 	
 	if (depth < 0)

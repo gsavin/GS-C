@@ -33,8 +33,10 @@ gs_iterator_list_new(GList *list)
   struct _list_iterator *it;
   
   it = (struct _list_iterator*) malloc(sizeof(struct _list_iterator));
+  
   it->parent.__next = (GSIteratorNextCB) _list_next;
   it->parent.__free = NULL;
+  it->list          = list;
 
   return (GSIterator*) it;
 }
@@ -44,17 +46,17 @@ gs_iterator_free(GSIterator *iterator)
 {
   if (iterator->__free)
     iterator->__free(iterator);
-  
-  free(iterator);
+  else
+    free(iterator);
 }
 
 GSAPI inline void*
 gs_iterator_next(GSIterator *iterator)
 {
-  void **data;
+  void *data;
 
-  if (iterator->__next(iterator, data))
-    return *data;
+  if (iterator->__next(iterator, &data))
+    return data;
 
   return NULL;
 }

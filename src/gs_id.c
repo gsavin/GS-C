@@ -1,15 +1,15 @@
 #include "gs_id.h"
 #include <string.h>
 
-GSAPI element_id_t
-gs_id_copy(const element_id_t id)
+GSAPI gsid
+gs_id_copy(const gsid id)
 {
-  element_id_t clone;
+  gsid clone;
   unsigned int l;
 
   l = strlen(id);
 
-  clone = (element_id_t) malloc((1+l)*sizeof(char));
+  clone = (gsid) malloc((1+l)*sizeof(char));
   strncpy(clone, id, l);
   clone[l] = '\0';
 
@@ -17,7 +17,7 @@ gs_id_copy(const element_id_t id)
 }
 
 GSAPI void
-gs_id_release(element_id_t id)
+gs_id_release(gsid id)
 {
   free(id);
 }

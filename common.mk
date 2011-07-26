@@ -1,7 +1,7 @@
-CC=gcc -fPIC -O3
-EINA_DIR=/usr/local
+CC=gcc -fPIC -g
+GLIB_DIR=/usr/
 
 DEFS=
 
-CFLAGS=-I$(EINA_DIR)/include/eina-1 -I$(EINA_DIR)/include/eina-1/eina
-CLIBS =-L$(EINA_DIR)/lib -leina
+CFLAGS=-I$(GLIB_DIR)/include/glib-2.0 -I$(GLIB_DIR)/lib/glib-2.0/include
+CLIBS=-lglib-2.0

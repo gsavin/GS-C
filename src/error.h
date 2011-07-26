@@ -16,13 +16,13 @@
 
 #define ERROR(e)					\
   do {							\
-    g_error("#%d", e);				\
+    g_error(__FILE__ ":%d #%d", __LINE__, e);		\
     exit(e);						\
   } while(0)
 
 #define ERROR_ERRNO(e)				\
   do {						\
-    g_error("%s", strerror(errno));	\
+    g_error(__FILE__":"__LINE__" %s", strerror(errno));	\
     exit(e);					\
   } while(0)
 

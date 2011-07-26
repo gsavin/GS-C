@@ -2,7 +2,7 @@
 #define _GRAPHSTREAM_H_
 
 #include <stdio.h>
-#include <Eina.h>
+#include <glib.h>
 
 #include "config.h"
 #include "gs_types.h"

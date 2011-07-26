@@ -56,9 +56,5 @@ gs_node_edge_register(GSNode *node,
 GSAPI inline GSIterator*
 gs_node_edge_iterator_new(const GSNode *node)
 {
-  GSIterator *it;
-  it = (GSIterator*) malloc(sizeof(GSIterator));
-  it->list = node->edges;
-
-  return it;
+  return gs_iterator_list_new(node->edges);
 }

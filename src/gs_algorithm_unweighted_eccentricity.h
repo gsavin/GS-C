@@ -3,12 +3,20 @@
 
 #include "gs_graph.h"
 
-GSAPI int
-gs_algorithm_unweighted_eccentricity(const graph_t *graph,
-				     const node_t *node);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-GSAPI int
-gs_algorithm_unweighted_eccentricity_max(const graph_t *graph);
+  GSAPI int
+  gs_algorithm_unweighted_eccentricity(const GSGraph *graph,
+				       const GSNode *node);
+  
+  GSAPI int
+  gs_algorithm_unweighted_eccentricity_max(const GSGraph *graph);
+  
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_ALGORITHM_UNWEIGHTED_ECCENTRICITY_H_ */
 

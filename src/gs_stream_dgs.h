@@ -5,26 +5,42 @@
 #include "gs_common.h"
 #include "gs_stream.h"
 
-typedef struct _source_dgs source_dgs_t;
-typedef struct _sink_dgs sink_dgs_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-struct _source_dgs {
-  FILE *in;
-  GS_SOURCE_FIELD;
-};
+  typedef struct _source_dgs GSSourceDGS;
+  typedef struct _sink_dgs GSSinkDGS;
 
-struct _sink_dgs {
-  FILE *out;
-  GS_SINK_FIELD;
-};
+  struct _source_dgs {
+    GIOChannel *in;
+    GS_SOURCE_FIELD;
+  };
 
-#define DGS_SINK(sink) ((sink_dgs_t*)(sink->container))
+  struct _sink_dgs {
+    GIOChannel *out;
+    GS_SINK_FIELD;
+  };
 
-GSAPI source_dgs_t *gs_stream_source_file_dgs_open(const char *filename);
-GSAPI void gs_stream_source_file_dgs_close(source_dgs_t *source);
-GSAPI bool_t gs_stream_source_file_dgs_next(const source_dgs_t *source);
+#define DGS_SINK(sink) ((GSSinkDGS*)(sink->container))
 
-GSAPI sink_dgs_t *gs_stream_sink_file_dgs_open(const char *filename);
-GSAPI void gs_stream_sink_file_dgs_close(sink_dgs_t *sink);
+  GSAPI GSSourceDGS*
+  gs_stream_source_file_dgs_open(const char *filename);
+
+  GSAPI void
+  gs_stream_source_file_dgs_close(GSSourceDGS *source);
+
+  GSAPI gsboolean
+  gs_stream_source_file_dgs_next(const GSSourceDGS *source);
+
+  GSAPI GSSinkDGS*
+  gs_stream_sink_file_dgs_open(const char *filename);
+
+  GSAPI void
+  gs_stream_sink_file_dgs_close(GSSinkDGS *sink);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _GS_STREAM_DGS_H_ */

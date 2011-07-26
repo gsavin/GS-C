@@ -145,6 +145,12 @@ gs_graph_node_delete(const GSGraph *graph,
   g_hash_table_remove(graph->nodes, id);
 }
 
+GSAPI inline int
+gs_graph_node_get_count(const GSGraph *graph)
+{
+  return g_hash_table_size(graph->nodes);
+}
+
 GSAPI GSEdge*
 gs_graph_edge_add(GSGraph   *graph,
 		  const gsid id,
@@ -217,6 +223,12 @@ gs_graph_edge_delete(const GSGraph *graph,
 					id);
 
   g_hash_table_remove(graph->edges, id);
+}
+
+GSAPI inline int
+gs_graph_edge_get_count(const GSGraph *graph)
+{
+  return g_hash_table_size(graph->edges);
 }
 
 GSAPI GSIterator*

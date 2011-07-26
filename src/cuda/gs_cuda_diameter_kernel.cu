@@ -1,3 +1,5 @@
+#define STACK(i) stack[i]
+#define CLOSE(i) close[i]
 
 __global__ void diameter(const int    nodes,
 			 int   *degrees,
@@ -10,25 +12,25 @@ __global__ void diameter(const int    nodes,
 
   if (index < nodes) {
     int    looking, candidat, i, o, n, c;
-    int   *stack, *neigh;
-    float *closed;
+    int   *neigh, *stack;
     float  d;
+    float *close;
 
+    close = (float*) malloc(nodes*sizeof(float));
     stack = (int*) malloc(nodes*sizeof(int));
-    closed = (float*) malloc(nodes*sizeof(float));
 
     for (i = 0; i < nodes; i++)
-      closed [i] = -1;
+      CLOSE(i) = -1;
     
-    closed [index] = 0;
-    stack  [0]     = index;
+    CLOSE(index) = 0;
+    STACK(0)     = index;
     
     looking  = 0;
     candidat = 1;
     
     while (looking < candidat) {
       n = stack   [looking++];
-      d = closed  [n] + 1;
+      d = CLOSE(n) + 1;
       c = degrees [n];
       
       neigh = cells + n * padding;
@@ -36,13 +38,17 @@ __global__ void diameter(const int    nodes,
       for (i = 0; i < c; i++) {
 	o = *(neigh++);
 	
-	if (closed [o] < 0) {
-	  stack  [candidat++] = o;
-	  closed [o]          = d;
+	if (CLOSE(o) < 0) {
+	  STACK(candidat++) = o;
+	  CLOSE(o)          = d;
 	}
       }
     }
-    
-    eccentricities [index] = closed [stack[looking - 1]];
+
+    looking = STACK(looking - 1);
+    eccentricities [index] = CLOSE(looking);
+
+    free(stack);
+    free(close);
   }
 }

@@ -37,6 +37,9 @@ GSAPI GSNode *gs_graph_node_get(const GSGraph *graph,
 GSAPI void gs_graph_node_delete(const GSGraph *graph,
 				const gsid     id);
 
+GSAPI int
+gs_graph_node_get_count(const GSGraph *graph);
+
 GSAPI GSEdge *gs_graph_edge_add(GSGraph   *graph,
 				const gsid id,
 				const gsid source,
@@ -48,6 +51,9 @@ GSAPI GSEdge *gs_graph_edge_get(const GSGraph *graph,
 
 GSAPI void gs_graph_edge_delete(const GSGraph *graph,
 				const gsid     id);
+
+GSAPI int
+gs_graph_edge_get_count(const GSGraph *graph);
 
 GSAPI GSIterator *gs_graph_node_iterator_new(const GSGraph *graph);
 

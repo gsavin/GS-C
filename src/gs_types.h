@@ -7,9 +7,9 @@
 extern "C" {
 #endif
 
-  typedef char* gsid;
-  typedef char* gskey;
-  typedef double gsreal;
+  typedef gchar*   gsid;
+  typedef gchar*   gskey;
+  typedef double   gsreal;
   typedef gboolean gsboolean;
   
 #define GS_TRUE TRUE

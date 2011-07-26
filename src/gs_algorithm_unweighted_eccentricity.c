@@ -6,7 +6,7 @@
  */
 
 GSAPI static int
-_unweighted_eccentricity(iterator_t *it)
+_unweighted_eccentricity(GSIterator *it)
 {
   int r;
 
@@ -18,7 +18,7 @@ _unweighted_eccentricity(iterator_t *it)
     gs_iterator_free(it);
   }
   else {
-    EINA_LOG_DBG("iterator is NULL");
+    g_debug("iterator is NULL");
     r = -1;
   }
 
@@ -30,10 +30,10 @@ _unweighted_eccentricity(iterator_t *it)
  */
 
 GSAPI int
-gs_algorithm_unweighted_eccentricity(const graph_t *graph,
-				     const node_t *node)
+gs_algorithm_unweighted_eccentricity(const GSGraph *graph,
+				     const GSNode  *node)
 {
-  iterator_t *it;
+  GSIterator *it;
   it = gs_graph_iterator_bfs_new_from_root(graph,
 					   node);
 
@@ -41,9 +41,9 @@ gs_algorithm_unweighted_eccentricity(const graph_t *graph,
 }
 
 GSAPI int
-gs_algorithm_unweighted_eccentricity_max(const graph_t *graph)
+gs_algorithm_unweighted_eccentricity_max(const GSGraph *graph)
 {
-  iterator_t *it;
+  GSIterator *it;
   it = gs_graph_iterator_bfs_new(graph);
 
   return _unweighted_eccentricity(it);

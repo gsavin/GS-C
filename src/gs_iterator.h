@@ -19,6 +19,18 @@ extern "C" {
   GSAPI GSIterator*
   gs_iterator_list_new(GList *list);
 
+  GSAPI void
+  gs_iterator_free(GSIterator *iterator);
+  
+  GSAPI inline void*
+  gs_iterator_next(GSIterator *iterator);
+
+  GSAPI inline GSNode*
+  gs_iterator_next_node(GSIterator *iterator);
+
+  GSAPI inline GSEdge*
+  gs_iterator_next_edge(GSIterator *iterator);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,4 +1,7 @@
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "gs_stream_dgs.h"
 
 /**********************************************************************
@@ -12,73 +15,114 @@ typedef enum {
 } dgs_event_t;
 
 GSAPI static inline void
-_eat_end_of_line(FILE *in,
-		 bool_t spaces_allowed,
-		 bool_t all_allowed)
+_handle_io_status(GIOStatus status, GError **error)
 {
-  char c;
-  
-  while( ((c = fgetc(in)) == ' ' || c == '\t' || (c != '\n' && all_allowed))
-	 && (spaces_allowed || all_allowed))
-    ;
-
-  if(c != '\n')
+  switch(status) {
+  case G_IO_STATUS_ERROR:
     ERROR(GS_ERROR_IO);
+    break;
+  case G_IO_STATUS_EOF:
+    break;
+  case G_IO_STATUS_AGAIN:
+    ERROR(GS_ERROR_IO);
+    break;
+  case G_IO_STATUS_NORMAL:
+    break;
+  }
+
+  if (*error != NULL) {
+    g_error_free(*error);
+    *error = NULL;
+  }
+}
+
+GSAPI static inline gunichar
+_read_char(GIOChannel *in)
+{
+  GIOStatus status;
+  GError   *err;
+  gunichar  the_char;
+  
+  status = g_io_channel_read_unichar(in, &the_char, &err);
+  _handle_io_status(status, &err);
+
+  return the_char;
 }
 
 GSAPI static inline void
-_eat_spaces(FILE *in)
+_eat_end_of_line(GIOChannel *in,
+		 gsboolean   spaces_allowed,
+		 gsboolean   all_allowed)
 {
-  int c;
-  
-  while((c = fgetc(in)) == ' '|| c == '\t')
-    ;
+  GIOStatus status;
+  GError   *err;
+  gchar    *buffer;
+  gsize     length;
+  gsize     term;
+  gsize     i;
 
-  ungetc(c, in);
+  status = g_io_channel_read_line(in, &buffer, &length, &term, &err);
+  _handle_io_status(status, &err);
+  
+  for (i = 0; i < term; i++) {
+    if (!all_allowed &&
+	!(spaces_allowed && (buffer[i] == ' ' || buffer[i] == '\t')))
+      ERROR(GS_ERROR_IO);
+  }
+
+  if (buffer)
+    g_free(buffer);
+}
+
+GSAPI static inline void
+_eat_spaces(const GString *buffer,
+	    int           *from)
+{
+  while(buffer->str[*from] == ' ' || buffer->str[*from] == '\t')
+    (*from)++;
 }
 
 GSAPI static void
-_gs_stream_source_dgs_read_header(const source_dgs_t *source)
+_gs_stream_source_dgs_read_header(const GSSourceDGS *source)
 {
-  char magic[7];
-  size_t r;
+  GIOStatus status;
+  GError   *err;
+  GString  *buffer;
+  gsize     term;
 
-  r = fread(magic, sizeof(char), 6, source->in);
-  magic[6] = '\0';
+  err    = NULL;
+  buffer = g_string_new(NULL);
 
-  if(r<6)
-    ERROR(GS_ERROR_IO);
+  status = g_io_channel_read_line_string(source->in, buffer, &term, &err);
+  _handle_io_status(status, &err);
 
-  if(strcmp(magic,"DGS004") != 0) {
-    EINA_LOG_WARN("Invalid DGS magic header");
+  if (term != 6 || !g_str_has_prefix(buffer->str, "DGS004")) {
+    g_error("Invalid DGS magic header");
     ERROR(GS_ERROR_IO);
   }
-
-  _eat_end_of_line(source->in, GS_FALSE, GS_FALSE);
   
   // Next line is deprecated but still present.
   // Skipping it.
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
+  status = g_io_channel_read_line_string(source->in, buffer, &term, &err);
+  _handle_io_status(status, &err);
+
+  g_string_free(buffer, TRUE);
 }
 
 GSAPI static inline dgs_event_t
-_gs_stream_source_dgs_read_event_type(const source_dgs_t *source)
+_gs_stream_source_dgs_read_event_type(const GString *buffer,
+				      int           *pos)
 {
-  char c1, c2;
+  gchar c1, c2;
 
-  // Skip empty line
-  while((c1 = fgetc(source->in)) == '\n')
-    ;
-
-  c2 = fgetc(source->in);
+  c1 = buffer->str [(*pos)++];
+  c2 = buffer->str [(*pos)++];
 
   if(c1 >= 'A' && c1 <= 'Z')
     c1 = c1 - ('A' - 'a');
 
   if(c2 >= 'A' && c2 <= 'Z')
     c2 = c2 - ('A' - 'a');
-
-  EINA_LOG_DBG("%c%c", c1, c2);
 
   switch(c2) {
   case 'n':
@@ -120,28 +164,26 @@ _gs_stream_source_dgs_read_event_type(const source_dgs_t *source)
   }
 }
 
-GSAPI static inline element_id_t
-_dgs_read_id(FILE *in)
+GSAPI static inline gchar*
+_dgs_read_id(const GString *buffer,
+	     int           *pos)
 {
-  Eina_Strbuf *buffer;
-  char *id;
-  char c;
-  bool_t backslash;
+  GString  *id;
+  gchar     c;
+  gsboolean backslash;
 
-  buffer = eina_strbuf_new();
+  _eat_spaces(buffer, pos);
 
-  _eat_spaces(in);
-  c = fgetc(in);
+  c  = buffer->str[(*pos)++];
+  id = g_string_new(NULL);
 
   if(c == '"') {
-    while( (c = fgetc(in)) != '"' || backslash) {
+    while( (c = buffer->str[(*pos)++]) != '"' || backslash) {
       if(c == '\\') {
 	backslash = GS_TRUE;
       }
       else {
-	if(!eina_strbuf_append_char(buffer, c))
-	  ERROR(GS_ERROR_BUFFER_ERROR);
-	
+	id = g_string_append_c(id, c);
 	backslash = GS_FALSE;
       }
     }
@@ -152,208 +194,218 @@ _dgs_read_id(FILE *in)
 	   (c >= '0' && c <= '9') ||
 	   c == '_' || c == '-' || c == '.' ) {
       
-	if(!eina_strbuf_append_char(buffer, c))
-	  ERROR(GS_ERROR_BUFFER_ERROR);
-
-	c = fgetc(in);
+	id = g_string_append_c(id, c);
+	c = buffer->str[(*pos)++];
     }
 
     if(c != ' ' && c != '\t' && c != '\n' && c != EOF)
       ERROR(GS_ERROR_INVALID_ID_FORMAT);
 
-    ungetc(c, in);
+    *pos--;
   }
 
-  id = eina_strbuf_string_steal(buffer);
-  eina_strbuf_free(buffer);
-
-  EINA_LOG_DBG("\"%s\"", id);
-
-  return id;
+  return g_string_free(id, FALSE);
 }
 
 GSAPI static inline void
-_dgs_read_event_an(const source_dgs_t *source)
+_dgs_read_event_an(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
-  element_id_t id;
-  id = _dgs_read_id(source->in);
+  gchar *id;
+  id = _dgs_read_id(buffer, pos);
 
   // TODO : Handle attributes
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 
-  gs_stream_source_trigger_node_added(GS_SOURCE(source),
-				      GS_SOURCE(source)->id,
-				      id);
-
-  EINA_LOG_DBG("!");
-
-  gs_id_release(id);
+  gs_stream_source_trigger_node_added(source, source->id, id);
+  g_free(id);
 }
 
 GSAPI static inline void
-_dgs_read_event_cn(const source_dgs_t *source)
+_dgs_read_event_cn(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
   // TODO
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 }
 
 GSAPI static inline void
-_dgs_read_event_dn(const source_dgs_t *source)
+_dgs_read_event_dn(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
-  element_id_t id;
-  id = _dgs_read_id(source->in);
-  _eat_end_of_line(source->in, GS_TRUE, GS_FALSE);
+  gchar *id;
+  id = _dgs_read_id(buffer, pos);
 
-  gs_stream_source_trigger_node_deleted(GS_SOURCE(source),
-					GS_SOURCE(source)->id,
-					id);
-
-  gs_id_release(id);
+  gs_stream_source_trigger_node_deleted(source, source->id, id);
+  g_free(id);
 }
 
 GSAPI static inline void
-_dgs_read_event_ae(const source_dgs_t *source)
+_dgs_read_event_ae(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
-  element_id_t id;
-  element_id_t node_source, node_target;
-  int c;
-  bool_t directed;
+  gchar     *id;
+  gchar     *node_source;
+  gchar     *node_target;
+  gchar      c;
+  gsboolean  directed;
 
   directed = GS_FALSE;
 
-  id = _dgs_read_id(source->in);
-  _eat_spaces(source->in);
-  node_source = _dgs_read_id(source->in);
-  _eat_spaces(source->in);
+  id = _dgs_read_id(buffer, pos);
+  _eat_spaces(buffer, pos);
+  node_source = _dgs_read_id(buffer, pos);
+  _eat_spaces(buffer, pos);
 
-  c = fgetc(source->in);
+  c = buffer->str [(*pos)++];
 
   switch(c) {
   case '<':
     directed = GS_TRUE;
-    _eat_spaces(source->in);
+    _eat_spaces(buffer, pos);
     node_target = node_source;
-    node_source = _dgs_read_id(source->in);
+    node_source = _dgs_read_id(buffer, pos);
     break;
   case '>':
     directed = GS_TRUE;
-    _eat_spaces(source->in);
-    node_target = _dgs_read_id(source->in);
+    _eat_spaces(buffer, pos);
+    node_target = _dgs_read_id(buffer, pos);
     break;
   default:
-    ungetc(c, source->in);
-    node_target = _dgs_read_id(source->in);
+    (*pos)--;
+    node_target = _dgs_read_id(buffer, pos);
     break;
   }
-  
-  gs_stream_source_trigger_edge_added(GS_SOURCE(source),
-				      GS_SOURCE(source)->id,
+
+  gs_stream_source_trigger_edge_added(source,
+				      source->id,
 				      id,
 				      node_source,
 				      node_target,
 				      directed);
   
   // TODO : Handle attributes
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 
-  gs_id_release(id);
-  gs_id_release(node_source);
-  gs_id_release(node_target);
+  g_free(id);
+  g_free(node_source);
+  g_free(node_target);
 }
 
 GSAPI static inline void
-_dgs_read_event_ce(const source_dgs_t *source)
+_dgs_read_event_ce(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
   // TODO
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 }
 
 GSAPI static inline void
-_dgs_read_event_de(const source_dgs_t *source)
+_dgs_read_event_de(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
-  element_id_t id;
-  id = _dgs_read_id(source->in);
+  gchar *id;
+  id = _dgs_read_id(buffer, pos);
 
-  gs_stream_source_trigger_edge_deleted(GS_SOURCE(source),
-					GS_SOURCE(source)->id,
+  gs_stream_source_trigger_edge_deleted(source,
+					source->id,
 					id);
 
-  gs_id_release(id);
+  g_free(id);
 }
 
 GSAPI static inline void
-_dgs_read_event_cg(const source_dgs_t *source)
+_dgs_read_event_cg(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
   // TODO
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 }
 
 GSAPI static inline void
-_dgs_read_event_st(const source_dgs_t *source)
+_dgs_read_event_st(const GSSource *source,
+		   const GString  *buffer,
+		   int            *pos)
 {
   // TODO
-  _eat_end_of_line(source->in, GS_TRUE, GS_TRUE);
 }
 
 GSAPI static void
-_dgs_sink_callback(const sink_t *sink,
+_dgs_sink_callback(const GSSink *sink,
 		   const event_t e,
-		   size_t size,
-		   const void **data)
+		   size_t        size,
+		   const void  **data)
 {
-  sink_dgs_t *dgs;
-  int err;
-  dgs = DGS_SINK(sink);
+  GSSinkDGS *dgs;
+  GString   *buffer;
+  GIOStatus  status;
+  GError    *err;
+  gsize      bytes;
+
+  err = NULL;
+
+  dgs    = DGS_SINK(sink);
+  buffer = g_string_new("");
 
   switch(e) {
   case NODE_ADDED:
     assert(size > 1 );
-    err = fprintf(dgs->out, "an \"%s\"\n", data[1]);
+    g_string_append_printf(buffer, "an \"%s\"\n", data[1]);
     break;
   case NODE_DELETED:
     assert(size > 1 );
-    err = fprintf(dgs->out, "dn \"%s\"\n", data[1]);
+    g_string_append_printf(buffer, "dn \"%s\"\n", data[1]);
     break;
   case EDGE_ADDED:
     assert(size > 4 );
 
-    if((bool_t) data[4])
-       err = fprintf(dgs->out, "ae \"%s\" \"%s\" > \"%s\"\n",
-		     data[1],
-		     data[2],
-		     data[3]);
+    if((gsboolean) data[4])
+       g_string_append_printf(buffer, "ae \"%s\" \"%s\" > \"%s\"\n",
+			      data[1],
+			      data[2],
+			      data[3]);
     else
-       err = fprintf(dgs->out, "ae \"%s\" \"%s\" \"%s\"\n",
-		     data[1],
-		     data[2],
-		     data[3]);
+       g_string_append_printf(buffer, "ae \"%s\" \"%s\" \"%s\"\n",
+			      data[1],
+			      data[2],
+			      data[3]);
     break;
   case EDGE_DELETED:
     assert(size > 1 );
-    err = fprintf(dgs->out, "de \"%s\"\n", data[1]);
+    g_string_append_printf(buffer, "de \"%s\"\n", data[1]);
     break;
   }
 
-  if(err < 0)
-    ERROR(GS_ERROR_IO);
+  g_string_append_c(buffer, '\0');
 
-  fflush(dgs->out);
+  status = g_io_channel_write_chars(dgs->out, buffer->str, -1, &bytes, &err);
+  _handle_io_status(status, &err);
+
+  g_string_free(buffer, TRUE);
 }
 
 /**********************************************************************
  * PUBLIC
  */
 
-GSAPI source_dgs_t*
+GSAPI GSSourceDGS*
 gs_stream_source_file_dgs_open(const char *filename)
 {
-  source_dgs_t *source;
-  FILE *in;
+  GSSourceDGS *source;
+  GIOChannel  *in;
+  GError      *err;
 
-  in = fopen(filename, "r");
+  err = NULL;
+
+  in = g_io_channel_new_file(filename, "r", &err);
+
+  if (err != NULL)
+    g_error_free(err);
 
   if(in) {
-    source = (source_dgs_t*) malloc(sizeof(source_dgs_t));
+    source = (GSSourceDGS*) malloc(sizeof(GSSourceDGS));
     gs_stream_source_init(GS_SOURCE(source), filename);
     source->in = in;
     
@@ -362,97 +414,135 @@ gs_stream_source_file_dgs_open(const char *filename)
     return source;
   }
   
+  // TODO : Handle err
   return NULL;
 }
 
 GSAPI void
-gs_stream_source_file_dgs_close(source_dgs_t *source)
+gs_stream_source_file_dgs_close(GSSourceDGS *source)
 {
+  GIOStatus status;
+  GError   *err;
+
   if(!source)
     return;
 
-  fclose(source->in);
+  err = NULL;
+
+  status = g_io_channel_shutdown(source->in, FALSE, &err);
+  _handle_io_status(status, &err);
+  g_io_channel_unref(source->in);
+  
   gs_stream_source_finalize(GS_SOURCE(source));
   
   free(source);
 }
 
-GSAPI bool_t
-gs_stream_source_file_dgs_next(const source_dgs_t *source)
+GSAPI gsboolean
+gs_stream_source_file_dgs_next(const GSSourceDGS *source)
 {
   dgs_event_t e;
-  e = _gs_stream_source_dgs_read_event_type(source);
+  GString    *line;
+  int         pos;
+  GIOStatus   status;
+  GError     *err;
+  gsize       term;
+  
+  err  = NULL;
+  line = g_string_new(NULL);
+  term = 0;
+
+  do {
+    status = g_io_channel_read_line_string(source->in, line, &term, &err);
+    _handle_io_status(status, &err);
+  } while(status != G_IO_STATUS_EOF && term == 0);
+
+  pos    = 0;
+  
+  if (status == G_IO_STATUS_EOF)
+    e = DGS_EOF;
+  else
+    e = _gs_stream_source_dgs_read_event_type(line, &pos);
 
   switch(e) {
   case DGS_AN:
-    _dgs_read_event_an(source);
+    _dgs_read_event_an(GS_SOURCE(source), line, &pos);
     break;
   case DGS_CN:
-    _dgs_read_event_cn(source);
+    _dgs_read_event_cn(GS_SOURCE(source), line, &pos);
     break;
   case DGS_DN:
-    _dgs_read_event_dn(source);
+    _dgs_read_event_dn(GS_SOURCE(source), line, &pos);
     break;
   case DGS_AE:
-    _dgs_read_event_ae(source);
+    _dgs_read_event_ae(GS_SOURCE(source), line, &pos);
     break;
   case DGS_CE:
-    _dgs_read_event_ce(source);
+    _dgs_read_event_ce(GS_SOURCE(source), line, &pos);
     break;
   case DGS_DE:
-    _dgs_read_event_de(source);
+    _dgs_read_event_de(GS_SOURCE(source), line, &pos);
     break;
   case DGS_CG:
-    _dgs_read_event_cg(source);
+    _dgs_read_event_cg(GS_SOURCE(source), line, &pos);
     break;
   case DGS_ST:
-    _dgs_read_event_st(source);
+    _dgs_read_event_st(GS_SOURCE(source), line, &pos);
     break;
   case DGS_EOF:
+    g_string_free(line, TRUE);
     return GS_FALSE;
   }
+
+  g_string_free(line, TRUE);
 
   return GS_TRUE;
 }
 
-
-
-GSAPI sink_dgs_t*
+GSAPI GSSinkDGS*
 gs_stream_sink_file_dgs_open(const char *filename)
 {
-  sink_dgs_t *dgs;
-  int err;
-  FILE *out;
+  GSSinkDGS  *dgs;
+  GIOChannel *out;
+  GError     *err;
+  GIOStatus   status;
+  gsize       size;
 
-  out = fopen(filename, "w");
+  err = NULL;
+  out = g_io_channel_new_file(filename, "w", &err);
+  
+  if (err != NULL)
+    g_error_free(err);
 
   if(out == NULL)
-    ERROR_ERRNO(GS_ERROR_IO);
+    ERROR(GS_ERROR_IO);
 
-  dgs = (sink_dgs_t*) malloc(sizeof(sink_dgs_t));
+  dgs = (GSSinkDGS*) malloc(sizeof(GSSinkDGS));
   dgs->out = out;
   
   gs_stream_sink_init(GS_SINK(dgs),
 		      dgs,
 		      GS_SINK_CALLBACK(_dgs_sink_callback));
 
-  err = fprintf(out, "DGS004\nnull 0 0\n");
-  fflush(out);
-
-  if(err < 0)
-    ERROR(GS_ERROR_IO);
+  status = g_io_channel_write_chars(out, "DGS004\nnull 0 0\n\0", -1, &size, &err);
+  _handle_io_status(status, &err);
+  status = g_io_channel_flush(out, &err);
+  _handle_io_status(status, &err);
 
   return dgs;
 }
 
 GSAPI void
-gs_stream_sink_file_dgs_close(sink_dgs_t *sink)
+gs_stream_sink_file_dgs_close(GSSinkDGS *sink)
 {
-  int err;
+  GError   *err;
+  GIOStatus status;
 
-  err = fclose(sink->out);
-  if(err < 0)
-    ERROR(GS_ERROR_IO);
+  err = NULL;
+
+  status = g_io_channel_shutdown(sink->out, TRUE, &err);
+  _handle_io_status(status, &err);
+  g_io_channel_unref(sink->out);
 
   sink->out = NULL;
   gs_stream_sink_finalize(GS_SINK(sink));

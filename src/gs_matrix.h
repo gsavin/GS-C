@@ -4,6 +4,7 @@
 #include "gs_types.h"
 #include "gs_common.h"
 #include "gs_stream.h"
+#include "gs_id.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +13,7 @@ extern "C" {
 #ifndef GS_MATRIX_WEIGHTED
 # define GS_MATRIX_FLAG unsigned char
 #else
-# define GS_MATRIX_FLAG real_t
+# define GS_MATRIX_FLAG gsreal
 #endif
 
 #ifndef GS_MATRIX_ROW_ALLOC_STEP
@@ -23,29 +24,28 @@ extern "C" {
 #define GS_MATRIX_COLUMN_ALLOC_STEP 16
 #endif
 
-typedef struct _matrix      matrix_t;
-typedef struct _matrix_cell matrix_cell;
+typedef struct _matrix      GSMatrix;
+typedef struct _matrix_cell GSMatrixCell;
 
 struct _matrix {
   int             *cells;
   int             *degrees;
-  real_t          *weights;
+  gsreal          *weights;
   size_t           epr;
   size_t           davg;
   size_t           size;
   unsigned int     degree_max;
   unsigned int     nodes;
   unsigned int     edges;
-  Eina_Hash       *node_id2index;
-  Eina_List       *node_ids;
-  Eina_Hash       *edge_id2index;
+  GHashTable      *node_id2index;
+  GList           *node_ids;
+  GHashTable      *edge_id2index;
 
   GS_SINK_FIELD;
-  EINA_MAGIC
 };
 
 struct _matrix_cell {
-  element_id_t id;
+  gsid id;
   int          source;
   int          target;
 };
@@ -54,27 +54,27 @@ struct _matrix_cell {
 
 #define N_INDEX(m,n,i) (n * m->davg + i)
 
-GSAPI matrix_t *gs_matrix_new();
-GSAPI void gs_matrix_destroy(matrix_t *matrix);
+GSAPI GSMatrix *gs_matrix_new();
+GSAPI void gs_matrix_destroy(GSMatrix *matrix);
 
-GSAPI void gs_matrix_node_add(matrix_t    *matrix,
-			      element_id_t id);
+GSAPI void gs_matrix_node_add(GSMatrix *matrix,
+			      gsid      id);
 
-GSAPI void gs_matrix_edge_add(matrix_t    *matrix,
-			      element_id_t id,
-			      element_id_t src,
-			      element_id_t trg,
-			      bool_t       directed);
+GSAPI void gs_matrix_edge_add(GSMatrix *matrix,
+			      gsid      id,
+			      gsid      src,
+			      gsid      trg,
+			      gsboolean directed);
 
-GSAPI real_t gs_matrix_edge_weight_get(const matrix_t *matrix,
-				       int source,
-				       int target);
+GSAPI gsreal gs_matrix_edge_weight_get(const GSMatrix *matrix,
+				       int             source,
+				       int             target);
 
-GSAPI element_id_t gs_matrix_node_id_get(const matrix_t *matrix,
-					 int index);
+GSAPI gsid gs_matrix_node_id_get(const GSMatrix *matrix,
+				 int             index);
 
-GSAPI void gs_matrix_print(const matrix_t *matrix,
-			   FILE *out);
+GSAPI void gs_matrix_print(const GSMatrix *matrix,
+			   FILE           *out);
 
 #ifdef __cplusplus
 }

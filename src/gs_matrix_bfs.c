@@ -5,23 +5,21 @@
  * PRIVATE
  */
 
-typedef struct _matrix_iterator_bfs matrix_iterator_bfs;
+typedef struct _matrix_iterator_bfs GSMatrixIteratorBFS;
 
 struct _matrix_iterator_bfs {
-  Eina_Iterator parent;
+  GSIterator parent;
 
-  matrix_t      *matrix;
-  int            looking;
-  int            candidat;
-  int           *stack;
-  int           *closed;
-  int            depth_max;
-
-  EINA_MAGIC
+  GSMatrix  *matrix;
+  int        looking;
+  int        candidat;
+  int       *stack;
+  int       *closed;
+  int        depth_max;
 };
 
 GSAPI static inline void
-_bfs_candidat_add(matrix_iterator_bfs *iterator,
+_bfs_candidat_add(GSMatrixIteratorBFS *iterator,
 		  int candidat,
 		  int depth)
 {
@@ -35,21 +33,15 @@ _bfs_candidat_add(matrix_iterator_bfs *iterator,
   }
 }
 
-GSAPI static inline Eina_Bool
-_bfs_next(matrix_iterator_bfs *iterator,
+GSAPI static inline gsboolean
+_bfs_next(GSMatrixIteratorBFS *iterator,
 	  void               **data)
 {
-  return EINA_FALSE;
-}
-
-GSAPI static void*
-_bfs_get_container(matrix_iterator_bfs *iterator)
-{
-  return iterator->matrix;
+  return GS_FALSE;
 }
 
 GSAPI static void
-_bfs_free(matrix_iterator_bfs *iterator)
+_bfs_free(GSMatrixIteratorBFS *iterator)
 {
   //matrix_point *data;
   //
@@ -61,21 +53,15 @@ _bfs_free(matrix_iterator_bfs *iterator)
   free(iterator);
 }
 
-GSAPI static inline matrix_iterator_bfs *
-_gs_matrix_iterator_bfs_create(const matrix_t *matrix)
+GSAPI static inline GSMatrixIteratorBFS *
+_gs_matrix_iterator_bfs_create(const GSMatrix *matrix)
 {
   int i;
-  matrix_iterator_bfs *iterator;
-  iterator = (matrix_iterator_bfs*) malloc(sizeof(matrix_iterator_bfs));
-  
-  EINA_MAGIC_SET(iterator,          MATRIX_BFS_ITERATOR_MAGIC);
-  EINA_MAGIC_SET(&iterator->parent, EINA_MAGIC_ITERATOR);
+  GSMatrixIteratorBFS *iterator;
+  iterator = (GSMatrixIteratorBFS*) malloc(sizeof(GSMatrixIteratorBFS));
 
-  iterator->parent.next          = FUNC_ITERATOR_NEXT(_bfs_next);
-  iterator->parent.get_container = FUNC_ITERATOR_GET_CONTAINER(_bfs_get_container);
-  iterator->parent.free          = FUNC_ITERATOR_FREE(_bfs_free);
-  iterator->parent.lock          = FUNC_ITERATOR_LOCK(NULL);
-  iterator->parent.unlock        = FUNC_ITERATOR_LOCK(NULL);
+  iterator->parent.__next = (GSIteratorNextCB) _bfs_next;
+  iterator->parent.__free = (GSIteratorFreeCB) _bfs_free;
 
   iterator->matrix    = matrix;
   iterator->closed    = (int*) malloc(matrix->nodes * sizeof(int));
@@ -94,29 +80,27 @@ _gs_matrix_iterator_bfs_create(const matrix_t *matrix)
  * PUBLIC
  */
 
-GSAPI iterator_t*
-gs_matrix_iterator_bfs_new_from_index(const matrix_t *matrix,
+GSAPI GSIterator*
+gs_matrix_iterator_bfs_new_from_index(const GSMatrix *matrix,
 				      int index)
 {
-  matrix_iterator_bfs *iterator;
+  GSMatrixIteratorBFS *iterator;
 
   iterator = _gs_matrix_iterator_bfs_create(matrix);
   _bfs_candidat_add(iterator, index, 0);
 
-  return (iterator_t*) iterator;
+  return (GSIterator*) iterator;
 }
 
 GSAPI void
-gs_matrix_iterator_bfs_reset_from_index(iterator_t *iterator,
+gs_matrix_iterator_bfs_reset_from_index(GSIterator *iterator,
 					int index)
 {
   if (iterator) {
-    matrix_iterator_bfs *bfs;
+    GSMatrixIteratorBFS *bfs;
     int i;
     
-    CHECK_MATRIX_BFS_ITERATOR_MAGIC((matrix_iterator_bfs*) iterator, -1);
-    
-    bfs            = (matrix_iterator_bfs*) iterator;
+    bfs            = (GSMatrixIteratorBFS*) iterator;
     bfs->candidat  = 0;
     bfs->depth_max = 0;
     bfs->looking   = 0;
@@ -131,20 +115,18 @@ gs_matrix_iterator_bfs_reset_from_index(iterator_t *iterator,
 }
 
 GSAPI inline int
-gs_matrix_iterator_bfs_index_next(iterator_t *iterator)
+gs_matrix_iterator_bfs_index_next(GSIterator *iterator)
 {
   int index [1];
 
-  CHECK_MATRIX_BFS_ITERATOR_MAGIC((matrix_iterator_bfs*) iterator, -1);
-
-  if (eina_iterator_next(iterator, (void**) &index) == EINA_FALSE)
+  //if (gs_iterator_next(iterator, (void**) &index) == GS_FALSE)
     return -1;
 
-  return index[0];
+    //return index[0];
 }
 
 GSAPI int
-gs_matrix_unweighted_eccentricity(matrix_t *matrix,
+gs_matrix_unweighted_eccentricity(GSMatrix *matrix,
 				  int index)
 {
   int  d, dmax;
@@ -205,9 +187,8 @@ gs_matrix_unweighted_eccentricity(matrix_t *matrix,
 }
 
 GSAPI int
-gs_matrix_iterator_bfs_depth_max_get(iterator_t *iterator)
+gs_matrix_iterator_bfs_depth_max_get(GSIterator *iterator)
 {
-  CHECK_MATRIX_BFS_ITERATOR_MAGIC((matrix_iterator_bfs*) iterator, -1);
-  return ((matrix_iterator_bfs*) iterator)->depth_max;
+  return ((GSMatrixIteratorBFS*) iterator)->depth_max;
 }
 

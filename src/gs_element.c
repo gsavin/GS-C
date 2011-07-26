@@ -32,7 +32,7 @@ _gs_element_attribute_get(const GSElement *element,
 			  const gskey      key)
 {
   attribute_value *value;
-  value = (attribute_value*) g_hash_table_lookup(e->attributes, key);
+  value = (attribute_value*) g_hash_table_lookup(element->attributes, key);
 
   if(value == NULL)
     ERROR(GS_ERROR_UNKNOWN_ATTRIBUTE);
@@ -43,7 +43,7 @@ _gs_element_attribute_add(const GSElement *element,
 			  const gskey      key,
 			  attribute_value *value)
 {
-  g_hash_table_insert(e->attributes, key, value);
+  g_hash_table_insert(element->attributes, key, value);
 }
 
 /**********************************************************************
@@ -149,7 +149,7 @@ gs_element_attribute_change_int(const GSElement *element,
   return old;
 }
 
-GSAPI real_t
+GSAPI gsreal
 gs_element_attribute_change_real(const GSElement *element,
 				 const gskey      key,
 				 gsreal           value)
